@@ -1,0 +1,14 @@
+langchain
+langchain-openai
+langchain-community
+langchain-experimental
+langgraph
+pillow
+python-dotenv
+tqdm
+fastapi
+uvicorn[standard]
+python-dotenv
+firebase_admin
+gunicorn
+langchain-google-firestore
