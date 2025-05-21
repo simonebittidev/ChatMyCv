@@ -18,6 +18,51 @@ const ChatContent = () => {
   const [isInputFocused, setInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const typeAiMessage = (message: string) => {
+    let i = 0;
+  
+    setChatMessages(prev => [
+      ...prev,
+      { role: 'ai', content: '' }
+    ]);
+  
+    function typeNextChar() {
+      setChatMessages(prev => {
+        const lastIdx = prev.length - 1;
+        const lastMsg = prev[lastIdx];
+        if (lastMsg.role !== 'ai') return prev;
+  
+        const updatedMsg = {
+          ...lastMsg,
+          content: message.slice(0, i + 1)
+        };
+        const updated = [...prev.slice(0, lastIdx), updatedMsg];
+  
+        i++;
+  
+        // Condizione di fine typing
+        if (i < message.length) {
+          // Variabilità: intervallo casuale tra 10ms e 40ms
+          const randomInterval = Math.floor(Math.random() * 30) + 5;
+          setTimeout(typeNextChar, randomInterval);
+        }
+        return updated;
+      });
+    }
+  
+    typeNextChar();
+  };
+
+  const handleSuggestedClick = (text: string) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ text }));
+      setChatMessages(prev => [
+        ...prev,
+        { role: 'human', content: text }
+      ]);
+    }
+  };
+
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
@@ -34,34 +79,19 @@ const ChatContent = () => {
       try {
         const data = JSON.parse(event.data);
 
-        if (typeof data === "object" && data !== null && "event" in data) {
-          const typingMsg = `${data["agent_name"]} is typing...`;
-          setIsTyping(prev => (prev.includes(typingMsg) ? prev : [...prev, typingMsg]));
+        console.log(data)
 
-          // Timeout automatico per rimuovere dopo 3s
-          setTimeout(() => {
-            setIsTyping(prev => prev.filter(item => item !== typingMsg));
-          }, 3000);
-        }
-        else {
-          const messages = JSON.parse(data);
-          if (Array.isArray(messages)) {
-            const lastElement = messages[messages.length - 1];
-
-            setIsTyping(prev => prev.filter(item => item !== `${lastElement.agent_name} is typing...`));
-
-            console.log(JSON.stringify(messages));
-            console.log('messaggi ws ricevuti in formato array');
-            setChatMessages(messages);
-          } else {
-            console.log('messaggi ws non ricevuti in formato array');
-            console.log(messages);
-          }
+        if (data.role === 'ai') {
+          typeAiMessage(data.content);
+        } else {
+          setChatMessages(prev => [...prev, data]);
         }
 
       } catch (err) {
         console.error("Errore parsing messaggio:", err);
       }
+
+      console.log("RICEVUTO MESSAGGIO")
     };
 
     socket.onclose = () => {
@@ -71,7 +101,7 @@ const ChatContent = () => {
     return () => {
       socket.close();
     };
-  });
+  }, []);
 
   useEffect(() => {
     if (chatBoxRef.current) {
@@ -105,11 +135,13 @@ const ChatContent = () => {
           {!chatMessages?.length &&
             <div className='py-20 px-4'>
               <div className='text-2xl text-gray-800 font-semibold '>Hello there!</div>
-              <div className='text-2xl text-zinc-500 '>I'm here to answer any questions you may have about Simone, is there anything in particular you want to know?</div>
+              <div className='text-1xl text-zinc-500 '> I'm here to answer any questions you have about Simone.<br/>
+                Curious about his experience, passions, or what makes him unique?<br/>
+                Just ask—I'm here to help you discover more!</div>
             </div>
           }
           <div
-            className="flex-1 overflow-y-auto p-4"
+            className="flex-1 overflow-y-auto"
             ref={chatBoxRef}
             style={{
               paddingBottom: isInputFocused && isMobile ? "270px" : "150px",
@@ -119,7 +151,7 @@ const ChatContent = () => {
             {chatMessages.map((msg, i) => (
               <div key={i} className={`mb-5 flex items-start gap-2 ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`rounded-xl px-5 py-3 text-sm max-w-[80%] whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white' : 'bg-gray-100 text-black'}`}
+                  className={`rounded-xl py-3 text-sm max-w-[80%] whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5' : 'text-black '}`}
                 >
                   {msg.content}
                 </div>
@@ -138,26 +170,35 @@ const ChatContent = () => {
         <div className="p-3 bg-white fixed bottom-0 left-0 right-0 z-20 w-full flex justify-center">
           <div className="w-full max-w-xl">
             {!chatMessages?.length &&
-              <div data-testid="suggested-actions" className="grid sm:grid-cols-2 gap-2 w-full mb-2"><div className="block">
-                <button className="inline-flex font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start " >
+              <div data-testid="suggested-actions" className="grid sm:grid-cols-2 gap-2 w-full mb-2">
+                <div className="block">
+                <button
+                  onClick={() => handleSuggestedClick("Which companies has Simone worked for?")}
+                  className="flex flex-col  font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start " >
                   <span className="font-medium ">Experiences</span>
                   <span className="text-muted-foreground text-gray-500 break-words">Which companies has Simone worked for?</span>
                 </button>
               </div>
                 <div className="block">
-                  <button className="inline-flex font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50  hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
+                  <button 
+                    onClick={() => handleSuggestedClick("What technologies does Simone have experience with?")}
+                    className="flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50  hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
                     <span className="font-medium">Technologies</span>
                     <span className="text-muted-foreground text-gray-500 break-words">What technologies does Simone have experience with?</span>
                   </button>
                 </div>
                 <div className="hidden sm:block">
-                  <button className="break-words inline-flex font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
+                  <button 
+                    onClick={() => handleSuggestedClick("What personal projects has Simone worked on?")}
+                    className="break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
                     <span className="font-medium">Personal projects</span>
                     <span className="text-muted-foreground text-gray-500">What personal projects has Simone worked on?</span>
                     </button>
                     </div>
                     <div className="hidden sm:block" >
-                      <button className="break-words inline-flex font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
+                      <button 
+                        onClick={() => handleSuggestedClick("Who is Simone?")}
+                        className="h-full break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
                         <span className="font-medium">Personal life</span>
                       <span className="text-muted-foreground text-gray-500 break-words">Who is Simone?</span>
                   </button>

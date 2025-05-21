@@ -9,6 +9,7 @@ tqdm
 fastapi
 uvicorn[standard]
 python-dotenv
-firebase_admin
 gunicorn
-langchain-google-firestore
+langchain-neo4j
+neo4j
+PyMuPDF
