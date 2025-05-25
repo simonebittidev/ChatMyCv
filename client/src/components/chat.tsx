@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpIcon } from '@heroicons/react/24/solid';
+import { ArrowUpIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import ReactMarkdown from 'react-markdown';
 
 type ChatMessage = {
@@ -46,7 +46,7 @@ const ChatContent = () => {
         // Condizione di fine typing
         if (i < words.length) {
           // Intervallo casuale tra una parola e l'altra
-          const randomInterval = Math.floor(Math.random() * 150) + 80;
+          const randomInterval = Math.floor(Math.random() * 100) + 40;
           setTimeout(typeNextWord, randomInterval);
         }
         return updated;
@@ -147,14 +147,19 @@ const ChatContent = () => {
             className="flex-1 overflow-y-auto"
             ref={chatBoxRef}
             style={{
-              paddingBottom: isInputFocused && isMobile ? "180px" : "84px",
+              paddingBottom: isInputFocused && isMobile ? "200px" : "104px",
               transition: "padding-bottom 0.2s",
             }}
           >
             {chatMessages.map((msg, i) => (
               <div key={i} className={`mb-5 flex items-start gap-2 ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'ai' && (
+                  <div className="flex-shrink-0 w-8 h-8 mr-2 flex items-center justify-center border border-gray-200 rounded-full text-gray-800 self-start">
+                    <SparklesIcon className="w-4 h-4" />
+                  </div>
+                )}
                 <div
-                  className={`rounded-xl py-3 text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%]' : 'text-black '}`}
+                  className={`rounded-xl text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%] py-3' : 'text-gray-800'}`}
                 >
                   <ReactMarkdown>
                     {msg.content}

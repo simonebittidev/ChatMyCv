@@ -56,7 +56,7 @@ async def websocket_endpoint(websocket: WebSocket):
             llm = AzureChatOpenAI(
                 azure_deployment="gpt-4.1",
                 openai_api_version="2024-12-01-preview",
-                temperature=0.0
+                temperature=0.4
             )
 
             embeddings_3_large : AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(
@@ -90,26 +90,35 @@ async def websocket_endpoint(websocket: WebSocket):
             entity_chain = prompt | llm.with_structured_output(Entities)
 
             template = """
-                Sei un assistente virtuale che si occupa di rispondere a domande poste da un recruiter riguardo un candidato.
+                You are a virtual assistant tasked with answering questions from the user about a specific candidate.
 
-                Ti verranno fornite le seguenti informazioni:
-                - l'input dell'utente
-                - un contesto composto da Structured Data derivata da un knwoledge graph e Unstructured Data ricavato da documenti presenti su un vectore store riguardanti la persona su cui vengono poste domande.
-                    
-                Il tuo task è di analizzare il contesto fornito ed elaborare una risposta finale per l'utente in modo da mettere sotto una buona luce la persona a cui si riferisce il contesto fornito.
+                You will be provided with the following information:
 
-                Segui le seguenti istruzioni:
-                - Basati sulle informazioni contenute nel contesto per elaborare la risposta finale per l'utente.
-                - Rispondi direttamente all'utente senza menzionare da dove hai ricavato le informazioni.
-                - Se l'input dell'utente non è pertinete rispondi con "Mi dispiace ma non posso rispondere a questa domanda".
-                - Evidenzia le parole chiave in grasetto, dividi il testo in paragrafi andando a capo dove necessario e formatta il testo in Markdown.
-                - Rielabora le informazioni contenute nel contesto, senza inventare, per creare una risposta ben strutturata, coerente e comprensibile.
+                - The user’s question
+                - A context consisting of:
+	                1. Structured Data derived from a knowledge graph
+	                2. Unstructured Data extracted from documents stored in a vector database, all related to the candidate in question
+               
+                Your goal is to analyze the provided context and craft a final response that highlights the strengths of the candidate.
 
-                Input dell'utente: {question}
+                How to respond:
+	            - Use only the information provided in the context.
+	            - Do not mention the sources or explain how you derived the information. Just answer the question as if you already know the candidate.
+	            - If the question is irrelevant or cannot be answered based on the context, reply with: “I’m sorry, but I can’t answer that question.”
+	            - Structure your response clearly:
+		            - Open with a short summary or direct answer
+	                - Use paragraphs to separate different ideas
+	                - Highlight important skills, achievements, or traits in bold
+	                - Use Markdown formatting for clarity and readability
+	            - Rephrase and summarize the information—don’t copy-paste, and don’t invent.
+	            - Your answer should sound natural and professional, as if you’re helping the user get a quick but insightful picture of the candidate.
+	            - The final response must be clear, polished, and make the candidate's strengths and experiences easy to understand and appreciate.
+
+                User Input: {question}
                 
-                Contesto: {context}
+                Context: {context}
 
-                Rispondi nella stessa lingua dell'utente.
+                Respond in English.
                 """
 
             prompt = ChatPromptTemplate.from_template(template)

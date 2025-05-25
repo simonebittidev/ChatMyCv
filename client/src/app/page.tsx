@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <>
       <div className="bg-white">
-        <Navbar></Navbar>
+        {/* <Navbar></Navbar> */}
         <Chat></Chat>
       </div>
     </>
