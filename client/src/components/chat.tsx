@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpIcon } from '@heroicons/react/24/solid';
+import ReactMarkdown from 'react-markdown';
 
 type ChatMessage = {
   role: 'human' | 'ai';
@@ -19,6 +20,7 @@ const ChatContent = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const typeAiMessage = (message: string) => {
+    const words = message.split(" ");
     let i = 0;
   
     setChatMessages(prev => [
@@ -26,7 +28,7 @@ const ChatContent = () => {
       { role: 'ai', content: '' }
     ]);
   
-    function typeNextChar() {
+    function typeNextWord() {
       setChatMessages(prev => {
         const lastIdx = prev.length - 1;
         const lastMsg = prev[lastIdx];
@@ -34,23 +36,24 @@ const ChatContent = () => {
   
         const updatedMsg = {
           ...lastMsg,
-          content: message.slice(0, i + 1)
+          // Unisce tutte le parole fino all'indice i, aggiungendo uno spazio tra loro
+          content: words.slice(0, i + 1).join(" ")
         };
         const updated = [...prev.slice(0, lastIdx), updatedMsg];
   
         i++;
   
         // Condizione di fine typing
-        if (i < message.length) {
-          // Variabilità: intervallo casuale tra 10ms e 40ms
-          const randomInterval = Math.floor(Math.random() * 30) + 5;
-          setTimeout(typeNextChar, randomInterval);
+        if (i < words.length) {
+          // Intervallo casuale tra una parola e l'altra
+          const randomInterval = Math.floor(Math.random() * 150) + 80;
+          setTimeout(typeNextWord, randomInterval);
         }
         return updated;
       });
     }
   
-    typeNextChar();
+    typeNextWord();
   };
 
   const handleSuggestedClick = (text: string) => {
@@ -109,9 +112,9 @@ const ChatContent = () => {
     }
   }, [chatMessages]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [chatMessages]);
 
   const handleSend = () => {
     if (!chatInput.trim()) return;
@@ -131,7 +134,7 @@ const ChatContent = () => {
   return (
     <div className="flex flex-col h-screen items-center justify-center">
       <div className="flex flex-col h-full w-full max-w-xl mx-auto">
-        <div className="h-16 w-full mt-20">
+        <div className="h-16 w-full mt-20 p-3">
           {!chatMessages?.length &&
             <div className='py-20 px-4'>
               <div className='text-2xl text-gray-800 font-semibold '>Hello there!</div>
@@ -144,16 +147,18 @@ const ChatContent = () => {
             className="flex-1 overflow-y-auto"
             ref={chatBoxRef}
             style={{
-              paddingBottom: isInputFocused && isMobile ? "270px" : "150px",
+              paddingBottom: isInputFocused && isMobile ? "180px" : "84px",
               transition: "padding-bottom 0.2s",
             }}
           >
             {chatMessages.map((msg, i) => (
               <div key={i} className={`mb-5 flex items-start gap-2 ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`rounded-xl py-3 text-sm max-w-[80%] whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5' : 'text-black '}`}
+                  className={`rounded-xl py-3 text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%]' : 'text-black '}`}
                 >
-                  {msg.content}
+                  <ReactMarkdown>
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               </div>
             ))}
@@ -198,14 +203,14 @@ const ChatContent = () => {
                     <div className="hidden sm:block" >
                       <button 
                         onClick={() => handleSuggestedClick("Who is Simone?")}
-                        className="h-full break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
+                        className="h-full break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full justify-start items-start">
                         <span className="font-medium">Personal life</span>
                       <span className="text-muted-foreground text-gray-500 break-words">Who is Simone?</span>
                   </button>
                 </div>
               </div>
             }
-            <div tabIndex={0} className="flex gap-2 border p-2 rounded-2xl border-gray-800 bg-gray-100 h-24 focus-within:ring-2 focus-within:ring-gary-700 focus-within:outline-none">
+            <div tabIndex={0} className="flex gap-2 border p-2 rounded-2xl border-gray-300 bg-gray-100 h-24 focus-within:ring-2 focus-within:ring-gary-700 focus-within:outline-none">
               <textarea
                 ref={inputRef}
                 value={chatInput}

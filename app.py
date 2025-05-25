@@ -99,14 +99,17 @@ async def websocket_endpoint(websocket: WebSocket):
                 Il tuo task è di analizzare il contesto fornito ed elaborare una risposta finale per l'utente in modo da mettere sotto una buona luce la persona a cui si riferisce il contesto fornito.
 
                 Segui le seguenti istruzioni:
-                - Basati **esclusivamente** sulle informazioni di contesto per elaborare la risposta finale per l'utente.
+                - Basati sulle informazioni contenute nel contesto per elaborare la risposta finale per l'utente.
                 - Rispondi direttamente all'utente senza menzionare da dove hai ricavato le informazioni.
-                - Cerca di comprendere il contenuto del contesto ed elabora una risposta grammaticalmente e seanticamente corretta.
-                - Usa un tono informale e amichevole.
-                
-                Question: {question}
+                - Se l'input dell'utente non è pertinete rispondi con "Mi dispiace ma non posso rispondere a questa domanda".
+                - Evidenzia le parole chiave in grasetto, dividi il testo in paragrafi andando a capo dove necessario e formatta il testo in Markdown.
+                - Rielabora le informazioni contenute nel contesto, senza inventare, per creare una risposta ben strutturata, coerente e comprensibile.
 
+                Input dell'utente: {question}
+                
                 Contesto: {context}
+
+                Rispondi nella stessa lingua dell'utente.
                 """
 
             prompt = ChatPromptTemplate.from_template(template)
