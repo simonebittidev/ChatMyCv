@@ -16,13 +16,13 @@ def generate_full_text_query(input: str) -> str:
     full_text_query += f" {words[-1]}~2"
     return full_text_query.strip()
     
-def structured_retriever(graph, question: str, entity_chain) -> str:
+def structured_retriever(graph, question: str, chat_history, entity_chain) -> str:
     """
     Collects the neighborhood of entities mentioned
     in the question
     """
     result = ""
-    entities = entity_chain.invoke({"question": question})
+    entities = entity_chain.invoke({"question": question, "chat_history": chat_history})
     for entity in entities.names:
         response = graph.query(
             """CALL db.index.fulltext.queryNodes('entity', $query, 
@@ -44,14 +44,14 @@ def structured_retriever(graph, question: str, entity_chain) -> str:
         result += "\n".join([el['output'] for el in response])
     return result
     
-def retriever(graph, vector_index, question: str, entity_chain):
+def retriever(graph, vector_index, question: str, chat_history, entity_chain):
     print(f"Search query: {question}")
-    structured_data = structured_retriever(graph, question, entity_chain)
+    structured_data = structured_retriever(graph, question, chat_history, entity_chain)
     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
     final_data = f"""Structured data:
     {structured_data}
     Unstructured data:
     {"#Document ". join(unstructured_data)}
-        """
+    """
     return final_data
         

@@ -45,18 +45,20 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
             message=data["text"]
+            history=data["history"]
+
             print(f"Received message: {message}")
 
             graph = Neo4jGraph(
-                url="neo4j+s://5e4610f3.databases.neo4j.io",
-                username="neo4j",
-                password="ZRBjoQsMUFKVm70MxggvCUZEYlJBaDhjM-96Fv7MA3k",
+                url=os.getenv('NEO4J_URI'),
+                username= os.getenv('NEO4J_USERNAME'),
+                password=os.getenv('NEO4J_PASSWORD'),
                 refresh_schema=True)
 
             llm = AzureChatOpenAI(
                 azure_deployment="gpt-4.1",
                 openai_api_version="2024-12-01-preview",
-                temperature=0.4
+                temperature=0.2
             )
 
             embeddings_3_large : AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(
@@ -94,31 +96,35 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 You will be provided with the following information:
 
-                - The user’s question
+                - The user’s question.
+                - A chat history containing previous interactions with the user useful to understand better the context of the question.
                 - A context consisting of:
-	                1. Structured Data derived from a knowledge graph
-	                2. Unstructured Data extracted from documents stored in a vector database, all related to the candidate in question
+	                1. Structured Data derived from a knowledge graph.
+	                2. Unstructured Data extracted from documents stored in a vector database, all related to the candidate in question.
                
                 Your goal is to analyze the provided context and craft a final response that highlights the strengths of the candidate.
 
                 How to respond:
-	            - Use only the information provided in the context.
-	            - Do not mention the sources or explain how you derived the information. Just answer the question as if you already know the candidate.
-	            - If the question is irrelevant or cannot be answered based on the context, reply with: “I’m sorry, but I can’t answer that question.”
-	            - Structure your response clearly:
-		            - Open with a short summary or direct answer
-	                - Use paragraphs to separate different ideas
-	                - Highlight important skills, achievements, or traits in bold
-	                - Use Markdown formatting for clarity and readability
-	            - Rephrase and summarize the information—don’t copy-paste, and don’t invent.
-	            - Your answer should sound natural and professional, as if you’re helping the user get a quick but insightful picture of the candidate.
-	            - The final response must be clear, polished, and make the candidate's strengths and experiences easy to understand and appreciate.
+                - Use **only** the information provided in the context.
+                - Do **not** mention sources or explain how you derived the information. Just answer the question as if you already know the candidate.
+                - If the question is irrelevant or cannot be answered based on the context, reply with: “I’m sorry, but I can’t answer that question.”
+                - Structure your response clearly:
+                    - Start with a concise summary or direct answer.
+                    - Use paragraphs to separate different ideas.
+                    - Highlight important skills, achievements, or traits in **bold**.
+                    - Use **Markdown formatting only** for clarity and readability — **do not use HTML tags** (e.g., `<ul>`, `<li>`, `<strong>`, etc.).
+                    - Use bullet points (`-`) for lists.
+                - Rephrase and summarize the information — **do not copy-paste**, and **do not invent**.
+                - Your tone should be natural and professional, as if helping the user quickly understand the candidate's profile.
+                - The final response must be clear, polished, and make the candidate's strengths and experiences easy to understand and appreciate.
 
                 User Input: {question}
+
+                Chat history: {chat_history}
                 
                 Context: {context}
 
-                Respond in English.
+                is **essential** to answer using the same language as the user, so if the user asks a question in Italian, you must answer in Italian, and if the user asks a question in English, you must answer in English.
                 """
 
             prompt = ChatPromptTemplate.from_template(template)
@@ -126,8 +132,9 @@ async def websocket_endpoint(websocket: WebSocket):
             chain = (
                 RunnableParallel(
                     {
-                        "context": RunnableLambda(lambda x: retriever(graph, vector_index,x["question"], entity_chain )),
+                        "context": RunnableLambda(lambda x: retriever(graph, vector_index,x["question"] ,x["chat_history"], entity_chain )),
                         "question": RunnablePassthrough(),
+                        "chat_history":RunnablePassthrough()
                     }
                 )
                 | prompt
@@ -135,7 +142,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 | StrOutputParser()
             )
 
-            result = chain.invoke({"question": message})
+            result = chain.invoke({"question": message, "chat_history": history})
             await websocket.send_json({"role":"ai", "content":result})
 
     except WebSocketDisconnect:

@@ -34,19 +34,23 @@ def summarize_document(html_pages):
     text=str(html_pages)
    
     template=f"""
-        Ti verrà fornito un documento in formato HTML che contiene informazioni rigurdanti un curriculum vitae. 
-        
-        Il tuo task è di analizzare attentamente il documento fornito, estrapolare tutto il contenuto e elaborare un riassunto molto dettagliato del contenuto.
+    You will be provided with an HTML document containing information from a résumé (CV).
 
-        Segui le seguiti istruzioni: 
-        - è **essenziale** che tutto il contenuto venga estrapolato dal documento HTML.
-        - crea un riassunto il più dettagliato possibile senza tralasciare niente.
-        - correggi o arricchisci il riassunto cercando di rendere più chiare le esperienze e le tecnologie a cui fa riferimento.
-        - non aggiungere al riassunto esperienze o tecnologie che non sono presenti nel documento originale.
+    Your task is to:
+    - **Accurately extract** all relevant content from the HTML document.
+    - Write a **highly detailed summary** that includes every useful piece of information from the document.
+    - Improve the clarity of the summary by rephrasing experiences, skills, and technologies to make them easier to understand, if necessary.
+    - **Do not** add any information, experiences, or technologies that are not explicitly mentioned in the original document.
 
-        Restituisci in output solamente il testo contente riassunto elaborato a partire dal documento fornito in input.
+    Guidelines:
+    - Do not omit anything: every relevant detail must be included.
+    - The goal is to turn the HTML content into a precise, readable, and informative summary that clearly represents the candidate’s profile.
 
-        Ecco il documento HTML da analizzare: {text}"""
+    Return **only** the text of the summary, with no additional comments or formatting.
+
+    Here is the HTML document to analyze:
+    {text}
+    """
     
     ai_msg = llm.invoke([HumanMessage(content=template)])
     response  = ai_msg.content
@@ -56,7 +60,6 @@ def summarize_document(html_pages):
     except json.JSONDecodeError as e:
         print("Failed to decode JSON:", e)
         return None
-
 
 def convert_img_to_html(encoded_image):
 

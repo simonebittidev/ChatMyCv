@@ -4,8 +4,8 @@ import Footer from "@/components/footer";
 import CookieWidget from "@/components/cookie-widget";
 
 export const metadata: Metadata = {
-  title: "Parallax",
-  description: "Parallax - Chatbot",
+  title: "Ask my cv - Simone Bitti",
+  description: "Ask my cv is a web application that allows you to interact with my CV using natural language. You can ask questions about my skills, experience, and education, and get answers in real-time.",
 };
 
 export default function RootLayout({

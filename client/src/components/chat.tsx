@@ -46,7 +46,7 @@ const ChatContent = () => {
         // Condizione di fine typing
         if (i < words.length) {
           // Intervallo casuale tra una parola e l'altra
-          const randomInterval = Math.floor(Math.random() * 100) + 40;
+          const randomInterval = Math.floor(Math.random() * 80) + 20;
           setTimeout(typeNextWord, randomInterval);
         }
         return updated;
@@ -58,7 +58,7 @@ const ChatContent = () => {
 
   const handleSuggestedClick = (text: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ text }));
+      socketRef.current.send(JSON.stringify({ text: text, history: chatMessages}));
       setChatMessages(prev => [
         ...prev,
         { role: 'human', content: text }
@@ -112,17 +112,13 @@ const ChatContent = () => {
     }
   }, [chatMessages]);
 
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [chatMessages]);
-
   const handleSend = () => {
     if (!chatInput.trim()) return;
 
     let contentToSend = chatInput.trim();
 
     if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ text: contentToSend }));
+      socketRef.current.send(JSON.stringify({ text: contentToSend, history: chatMessages }));
       setChatInput("");
       setChatMessages([...chatMessages, { role: 'human', content: contentToSend }]);
     }
@@ -134,13 +130,13 @@ const ChatContent = () => {
   return (
     <div className="flex flex-col h-screen items-center justify-center">
       <div className="flex flex-col h-full w-full max-w-xl mx-auto">
-        <div className="h-16 w-full mt-20 p-3">
+        <div className="h-16 w-full mt-5 p-3">
           {!chatMessages?.length &&
             <div className='py-20 px-4'>
               <div className='text-2xl text-gray-800 font-semibold '>Hello there!</div>
-              <div className='text-1xl text-zinc-500 '> I'm here to answer any questions you have about Simone.<br/>
-                Curious about his experience, passions, or what makes him unique?<br/>
-                Just ask—I'm here to help you discover more!</div>
+              <div className='text-1xl text-zinc-500 '> I’m here to help you explore Simone’s professional profile.<br></br>
+                Interested in his experience, skills, or what sets him apart?<br></br>
+                Just ask a question—I’ll guide you through his CV to find the answers you need.</div>
             </div>
           }
           <div
@@ -207,7 +203,7 @@ const ChatContent = () => {
                     </div>
                     <div className="hidden sm:block" >
                       <button 
-                        onClick={() => handleSuggestedClick("Who is Simone?")}
+                        onClick={() => handleSuggestedClick("How can I contact Simone?")}
                         className="h-full break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full justify-start items-start">
                         <span className="font-medium">Personal life</span>
                       <span className="text-muted-foreground text-gray-500 break-words">Who is Simone?</span>
@@ -215,7 +211,7 @@ const ChatContent = () => {
                 </div>
               </div>
             }
-            <div tabIndex={0} className="flex gap-2 border p-2 rounded-2xl border-gray-300 bg-gray-100 h-24 focus-within:ring-2 focus-within:ring-gary-700 focus-within:outline-none">
+            <div tabIndex={0} className="flex gap-2 border p-3 rounded-2xl border-gray-300 bg-gray-100 h-24 focus-within:ring-2 focus-within:ring-gary-700 focus-within:outline-none">
               <textarea
                 ref={inputRef}
                 value={chatInput}
