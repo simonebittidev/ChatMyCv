@@ -106,11 +106,17 @@ const ChatContent = () => {
     };
   }, []);
 
+  // useEffect(() => {
+  //   if (chatBoxRef.current) {
+  //     chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+  //   }
+  // }, [chatMessages]);
+
   useEffect(() => {
-    if (chatBoxRef.current) {
-      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [chatMessages]);
+  }, [chatMessages, isTyping]);
 
   const handleSend = () => {
     if (!chatInput.trim()) return;
@@ -128,7 +134,7 @@ const ChatContent = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < MOBILE_WIDTH;
 
   return (
-    <div className="flex flex-col h-screen items-center justify-center">
+    <div className="flex flex-col h-screen items-center justify-center mt-10">
       <div className="flex flex-col h-full w-full max-w-xl mx-auto">
         <div className="h-16 w-full mt-5 p-3">
           {!chatMessages?.length &&
@@ -205,13 +211,13 @@ const ChatContent = () => {
                       <button 
                         onClick={() => handleSuggestedClick("How can I contact Simone?")}
                         className="h-full break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full justify-start items-start">
-                        <span className="font-medium">Personal life</span>
-                      <span className="text-muted-foreground text-gray-500 break-words">Who is Simone?</span>
+                        <span className="font-medium">Contact</span>
+                      <span className="text-muted-foreground text-gray-500 break-words">How can I contact Simone?</span>
                   </button>
                 </div>
               </div>
             }
-            <div tabIndex={0} className="flex gap-2 border p-3 rounded-2xl border-gray-300 bg-gray-100 h-24 focus-within:ring-2 focus-within:ring-gary-700 focus-within:outline-none">
+            <div tabIndex={0} className="flex gap-2 p-4 rounded-2xl bg-gray-100 h-24 border border-gray-200">
               <textarea
                 ref={inputRef}
                 value={chatInput}
@@ -235,7 +241,7 @@ const ChatContent = () => {
               />
               <button
                 onClick={handleSend}
-                className="bottom-0 right-3 w-8 h-8 bg-gray-500 text-white rounded-full flex items-center justify-center hover:bg-gray-800"
+                className="bottom-0 right-3 w-8 h-8 bg-gray-800 text-white rounded-full flex items-center justify-center hover:bg-gray-900"
               >
                 <ArrowUpIcon className='w-4 h-4'></ArrowUpIcon>
               </button>

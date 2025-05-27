@@ -5,13 +5,6 @@ import { useEffect } from 'react';
 
 // components/Footer.tsx
 export default function Footer() {
-    useEffect(() => {
-      const script = document.createElement("script");
-      script.src = "https://cdn.iubenda.com/iubenda.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }, []);
-    
     return (
         
       <footer className="px-5 py-5">
@@ -28,11 +21,6 @@ export default function Footer() {
             <div className="mt-12 grid grid-cols-1 gap-8 xl:col-span-4 text-center">
               <div className="md:grid md:grid-cols-4 md:gap-8">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900">Legal</h3>
-                  <ul role="list" className="mt-4 space-y-4 text-sm text-gray-500">
-                    <li><a href="https://www.iubenda.com/privacy-policy/51029933" className="iubenda-white iubenda-noiframe iubenda-embed iubenda-noiframe " title="Privacy Policy ">Privacy Policy</a></li>
-                    <li><a href="https://www.iubenda.com/privacy-policy/51029933/cookie-policy" className="iubenda-white iubenda-noiframe iubenda-embed iubenda-noiframe " title="Cookie Policy ">Cookie Policy</a></li>
-                  </ul>
                 </div>
               </div>
             </div>
