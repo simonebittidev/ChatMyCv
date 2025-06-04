@@ -63,15 +63,16 @@ def summarize_document(html_pages):
 
 def convert_img_to_html(encoded_image):
 
-    system_prompt = """Ti verrà fornita una immagine che rappresenta una pagina di un PDF e che può contenenere testo, immagini, tabelle e altre informazioni.
-    Il tuo compito è di analizzare attentamente l'immagine ed estrapolare tutte le informazioni in formato HTML.
+    system_prompt = """You will be provided with an image representing a page from a PDF, which may contain text, images, tables, and other information.
 
-    Segui le seguenti istruzioni:
-    - Se l'immagine è vuota o non contiene nessuna informazioni allora produrre nulla in output.
-    - Non aggiungere colori o stili nell'HTML generato.
-    - L'HTML generato deve manterele la stessa struttura rappresentata nell'immagine in modo da mantenere l'importanza e l'ordine delle varie informazioni estrapolate.
+    Your task is to carefully analyze the image and extract **all the information** in **HTML format**.
 
-    Restituisci in output solamente l'HTML generato in base all'immagine data in input.
+    Follow these instructions:
+    - If the image is empty or does not contain any useful information, produce no output.
+    - Do **not** add any colors or styles to the generated HTML.
+    - The generated HTML must **faithfully preserve the structure** represented in the image, maintaining the importance and order of all extracted information.
+
+    Your output should be **only** the generated HTML based on the input image.
     """
 
     prompt = ChatPromptTemplate.from_messages([
@@ -139,7 +140,7 @@ async def create_kg():
     documents = text_splitter.create_documents(texts,metadatas)
 
     for doc in documents:
-        doc.page_content = f"This document is a chunk of the original document {doc.metadata['source']} and refers to Simone Bitti. \n {doc.page_content}."
+        doc.page_content = f"This document is a chunk of the original document {doc.metadata['source']} and refers to Simone Bitti.\n\n {doc.page_content}."
   
     llm = AzureChatOpenAI(
         azure_deployment="gpt-4.1",
