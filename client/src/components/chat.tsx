@@ -57,60 +57,48 @@ const ChatContent = () => {
   };
 
   const handleSuggestedClick = (text: string) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ text: text, history: chatMessages}));
+      console.log("handling click");
       setChatMessages(prev => [
         ...prev,
         { role: 'human', content: text }
       ]);
-    }
+      startStream(text);
   };
 
-  useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-
-    const socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
-
-    console.log(`WebSocket URL: ${protocol}://${window.location.host}/ws`);
-    socketRef.current = socket;
-
-    socket.onopen = () => {
-      console.log("✅ WebSocket connesso");
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        console.log(data)
-
-        if (data.role === 'ai') {
-          typeAiMessage(data.content);
-        } else {
-          setChatMessages(prev => [...prev, data]);
-        }
-
-      } catch (err) {
-        console.error("Errore parsing messaggio:", err);
+  const startStream = (text: string) => {
+    const encodedHistory = encodeURIComponent(JSON.stringify(chatMessages.slice(-3)));
+    const eventSource = new EventSource(`/stream?text=${encodeURIComponent(text)}&history=${encodedHistory}`);
+  
+    let currentMessage = "";
+  
+    eventSource.onmessage = (event) => {
+      if (event.data === "[DONE]") {
+        eventSource.close();
+        return;
       }
-
-      console.log("RICEVUTO MESSAGGIO")
+  
+      const data = JSON.parse(event.data);
+      currentMessage += data.content;
+  
+      setChatMessages((prev) => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg?.role === 'ai') {
+          updated[updated.length - 1] = {
+            ...lastMsg,
+            content: currentMessage,
+          };
+          return updated;
+        }
+        return [...updated, { role: "ai", content: data.content }];
+      });
     };
-
-    socket.onclose = () => {
-      console.log("❌ WebSocket disconnesso");
+  
+    eventSource.onerror = () => {
+      console.error("Errore nella ricezione SSE");
+      eventSource.close();
     };
-
-    return () => {
-      socket.close();
-    };
-  }, []);
-
-  // useEffect(() => {
-  //   if (chatBoxRef.current) {
-  //     chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-  //   }
-  // }, [chatMessages]);
+  };
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -120,14 +108,11 @@ const ChatContent = () => {
 
   const handleSend = () => {
     if (!chatInput.trim()) return;
-
-    let contentToSend = chatInput.trim();
-
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ text: contentToSend, history: chatMessages }));
-      setChatInput("");
-      setChatMessages([...chatMessages, { role: 'human', content: contentToSend }]);
-    }
+  
+    const text = chatInput.trim();
+    setChatMessages((prev) => [...prev, { role: 'human', content: text }, { role: 'ai', content: '' }]);
+    setChatInput('');
+    startStream(text);
   };
 
   const MOBILE_WIDTH = 768;
@@ -157,7 +142,11 @@ const ChatContent = () => {
               <div key={i} className={`mb-5 flex items-start gap-2 ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'ai' && (
                   <div className="flex-shrink-0 w-8 h-8 mr-2 flex items-center justify-center border border-gray-200 rounded-full text-gray-800 self-start">
-                    <SparklesIcon className="w-4 h-4" />
+                    <SparklesIcon
+                      className={`w-4 h-4 transition-all duration-700 ${
+                        !msg.content ? 'animate-pulse' : ''
+                      }`}
+                    />
                   </div>
                 )}
                 <div

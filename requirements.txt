@@ -13,3 +13,7 @@ gunicorn
 langchain-neo4j
 neo4j
 PyMuPDF
+pypdf
+langchain-unstructured
+markitdown[all]
+pdfplumber

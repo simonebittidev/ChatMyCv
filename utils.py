@@ -1,57 +1,107 @@
-def generate_full_text_query(input: str) -> str:
-    """
-    Generate a full-text search query for a given input string.
+import json
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from pydantic import BaseModel, Field
+from typing import List
 
-    This function constructs a query string suitable for a full-text
-    search. It processes the input string by splitting it into words and 
-    appending a similarity threshold (~2 changed characters) to each
-    word, then combines them using the AND operator. Useful for mapping
-    entities from user questions to database values, and allows for some 
-    misspelings.
-    """
-    full_text_query = ""
-    words = [el for el in input.split() if el]
-    for word in words[:-1]:
-        full_text_query += f" {word}~2 AND"
-    full_text_query += f" {words[-1]}~2"
-    return full_text_query.strip()
-    
-def structured_retriever(graph, question: str, chat_history, entity_chain) -> str:
+def structured_retriever(graph, question: str, entity_chain) -> str:
     """
     Collects the neighborhood of entities mentioned
     in the question
     """
-    result = ""
-    entities = entity_chain.invoke({"question": question, "chat_history": chat_history})
-    for entity in entities.names:
-        response = graph.query(
-            """CALL db.index.fulltext.queryNodes('entity', $query, 
-            {limit:2})
-            YIELD node,score
-            CALL {
-            MATCH (node)-[r:!MENTIONS]->(neighbor)
-            RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS 
-            output
-            UNION
-            MATCH (node)<-[r:!MENTIONS]-(neighbor)
-            RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS 
-            output
-            }
-            RETURN output LIMIT 50
-            """,
-            {"query": generate_full_text_query(entity)},
-        )
-        result += "\n".join([el['output'] for el in response])
-    return result
+    no_results = "I couldn't find any relevant information in the database"
     
-def retriever(graph, vector_index, question: str, chat_history, entity_chain):
-    print(f"Search query: {question}")
-    structured_data = structured_retriever(graph, question, chat_history, entity_chain)
-    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
-    final_data = f"""Structured data:
-    {structured_data}
-    Unstructured data:
-    {"#Document ". join(unstructured_data)}
+    try:
+        generated_cypher = entity_chain.invoke(
+            {
+                "question": question,
+                "schema": graph.schema,
+            }
+        )
+
+        if generated_cypher:
+            generated_cypher = json.loads(generated_cypher)
+            
+            records = graph.query(generated_cypher["main_query"])
+
+            if records:
+                documents = graph.query(generated_cypher["document_distinct_query"])
+                return records, documents
+
+        return None, None
+    
+    except Exception as ex:
+        print(ex)
+        return None,None
+
+    
+def grade_document(question: str, documents):
+
+    llm = AzureChatOpenAI(
+        azure_deployment="gpt-4.1",
+        openai_api_version="2024-12-01-preview",
+        temperature=0.7 #more creative and less deterministic responses
+    )
+
+    relevance_prompt = """
+You are an expert in information retrieval and semantic analysis.
+
+## Goal
+You will be provided with a user query and a list of document chunks. Your task is to carefully analyze the meaning and intent of the user query, and select only the chunks that are truly relevant to answering or addressing the query.
+
+## Instructions
+
+- Read and understand the user query in detail.
+- Carefully analyze each provided chunk (title, content, and keywords).
+- For each chunk, decide if it is genuinely relevant and useful for the query—select only chunks that directly answer, match, or provide substantial information for the user's needs.
+- Do not include chunks that are only loosely related, contain background information, or do not contribute meaningfully to the user query.
+- You must be strict in your selection: only return chunks that you would judge as clearly relevant by the standards of an expert information specialist.
+- Maintain the original order of the chunks that you select.
+- Do not invent, rewrite, or summarize the content of the chunks. Return only the chunks as provided.
+
+## Output Format
+
+Return your response in the following JSON format:
+
+{
+  "relevant_documents": ["DOCUMENT_CONTENT1", "DOCUMENT_CONTENT2", ...]
+}
+
+- The output must be only valid JSON, with no extra explanation or commentary.
+"""
+
+    class Documents(BaseModel):
+        relevant_documents: List[str] = Field(
+            description="The content of the selected document"
+        )
+
+
+    result = llm.with_structured_output(Documents).invoke(
+        [
+            SystemMessage(content=relevance_prompt),
+            HumanMessage(content=f"Query:{question}\nDocuments to analyze: {documents}")
+        ] 
+    )
+
+    return result.relevant_documents
+
+
+def get_data(graph, vector_index, question: str, entity_chain):
+    structured_data, documents = structured_retriever(graph, question, entity_chain)
+
+    unstructured_data = [el.page_content for el in vector_index.similarity_search(question, k=10)]
+    
+    print(unstructured_data)
+
+    if documents:
+        unstructured_data = unstructured_data + documents
+
+    documents = grade_document(question=question, documents=unstructured_data)
+
+    final_data = f"""Structured data:\n
+    {structured_data}\n
+    Unstructured data:\n
+    {"#Document ". join(documents)}
     """
     return final_data
         
