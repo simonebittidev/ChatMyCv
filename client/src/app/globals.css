@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+hr {
+  @apply border-gray-300;
+}
+
 /* :root {
   --background: #ffffff;
   --foreground: #171717;

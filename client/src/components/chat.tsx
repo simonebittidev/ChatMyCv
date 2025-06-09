@@ -60,7 +60,8 @@ const ChatContent = () => {
       console.log("handling click");
       setChatMessages(prev => [
         ...prev,
-        { role: 'human', content: text }
+        { role: 'human', content: text },
+        { role: 'ai', content: '' }
       ]);
       startStream(text);
   };
@@ -135,7 +136,7 @@ const ChatContent = () => {
             ref={chatBoxRef}
             style={{
               paddingBottom: isInputFocused && isMobile ? "200px" : "104px",
-              transition: "padding-bottom 0.2s",
+              // transition: "padding-bottom 0.2s",
             }}
           >
             {chatMessages.map((msg, i) => (
@@ -150,7 +151,7 @@ const ChatContent = () => {
                   </div>
                 )}
                 <div
-                  className={`rounded-xl text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%] py-3' : 'text-gray-800'}`}
+                  className={`rounded-xl text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%] py-3' : 'text-gray-700'}`}
                 >
                   <ReactMarkdown>
                     {msg.content}
@@ -206,7 +207,8 @@ const ChatContent = () => {
                 </div>
               </div>
             }
-            <div tabIndex={0} className="flex gap-2 p-4 rounded-2xl bg-gray-100 h-24 border border-gray-200">
+            <div tabIndex={0}>
+            <div className="flex gap-2 p-4 rounded-2xl bg-gray-100 h-24 border border-gray-200">
               <textarea
                 ref={inputRef}
                 value={chatInput}
@@ -235,9 +237,18 @@ const ChatContent = () => {
                 <ArrowUpIcon className='w-4 h-4'></ArrowUpIcon>
               </button>
             </div>
+            <div className="mt-2 text-xs text-gray-500 text-center w-full">
+              <span>
+                This is a personal project for study purposes. Answers may contain errors or inaccurate information.<br/>
+                For feedback or info: <a href="mailto:simone.bitti.dev@gmail.com" className="underline">simone.bitti.dev@gmail.com</a>
+              </span>
+            </div>
+            </div>
           </div>
         </div>
       </div>
+      {/* Informational message below the textbox */}
+      
     </div>
   );
 };
