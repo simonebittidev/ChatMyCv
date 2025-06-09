@@ -14,47 +14,8 @@ const ChatContent = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const socketRef = useRef<WebSocket | null>(null);
-  const [isTyping, setIsTyping] = useState<string[]>([]);
   const [isInputFocused, setInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  const typeAiMessage = (message: string) => {
-    const words = message.split(" ");
-    let i = 0;
-  
-    setChatMessages(prev => [
-      ...prev,
-      { role: 'ai', content: '' }
-    ]);
-  
-    function typeNextWord() {
-      setChatMessages(prev => {
-        const lastIdx = prev.length - 1;
-        const lastMsg = prev[lastIdx];
-        if (lastMsg.role !== 'ai') return prev;
-  
-        const updatedMsg = {
-          ...lastMsg,
-          // Unisce tutte le parole fino all'indice i, aggiungendo uno spazio tra loro
-          content: words.slice(0, i + 1).join(" ")
-        };
-        const updated = [...prev.slice(0, lastIdx), updatedMsg];
-  
-        i++;
-  
-        // Condizione di fine typing
-        if (i < words.length) {
-          // Intervallo casuale tra una parola e l'altra
-          const randomInterval = Math.floor(Math.random() * 80) + 20;
-          setTimeout(typeNextWord, randomInterval);
-        }
-        return updated;
-      });
-    }
-  
-    typeNextWord();
-  };
 
   const handleSuggestedClick = (text: string) => {
       console.log("handling click");
@@ -101,12 +62,6 @@ const ChatContent = () => {
     };
   };
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatMessages, isTyping]);
-
   const handleSend = () => {
     if (!chatInput.trim()) return;
   
@@ -135,8 +90,7 @@ const ChatContent = () => {
             className="flex-1 overflow-y-auto"
             ref={chatBoxRef}
             style={{
-              paddingBottom: isInputFocused && isMobile ? "200px" : "104px",
-              // transition: "padding-bottom 0.2s",
+              paddingBottom: isInputFocused && isMobile ? "235px" : "140px",
             }}
           >
             {chatMessages.map((msg, i) => (
@@ -157,12 +111,6 @@ const ChatContent = () => {
                     {msg.content}
                   </ReactMarkdown>
                 </div>
-              </div>
-            ))}
-
-            {isTyping.map((typing, i) => (
-              <div key={`typing-${i}`} className="text-gray-500 text-sm px-10">
-                {typing}
               </div>
             ))}
 
@@ -239,7 +187,7 @@ const ChatContent = () => {
             </div>
             <div className="mt-2 text-xs text-gray-500 text-center w-full">
               <span>
-                This is a personal project for study purposes. Answers may contain errors or inaccurate information.<br/>
+                This is a personal study project; answers may be inaccurate.<br/>
                 For feedback or info: <a href="mailto:simone.bitti.dev@gmail.com" className="underline">simone.bitti.dev@gmail.com</a>
               </span>
             </div>
@@ -247,8 +195,6 @@ const ChatContent = () => {
           </div>
         </div>
       </div>
-      {/* Informational message below the textbox */}
-      
     </div>
   );
 };

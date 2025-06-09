@@ -1,9 +1,6 @@
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { useEffect } from 'react';
 
-
-
-// components/Footer.tsx
 export default function Footer() {
     return (
         
@@ -38,5 +35,5 @@ export default function Footer() {
         </div>
       </footer>
     );
-  }
+}
   
