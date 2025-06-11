@@ -4,6 +4,30 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowUpIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import ReactMarkdown from 'react-markdown';
 
+const suggestedActions = [
+  {
+    label: "Experiences",
+    text: "Which companies has Simone worked for?",
+  },
+  {
+    label: "Technologies",
+    text: "What technologies does Simone have experience with?",
+  },
+  {
+    label: "Personal projects",
+    text: "What personal projects has Simone worked on?",
+  },
+  {
+    label: "Contact",
+    text: "How can I contact Simone?",
+  }
+];
+
+function getRandomItems<T>(arr: T[], n: number): T[] {
+  const shuffled = arr.slice().sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, n);
+}
+
 type ChatMessage = {
   role: 'human' | 'ai';
   content: string;
@@ -84,6 +108,12 @@ const ChatContent = () => {
   const MOBILE_WIDTH = 768;
   const isMobile = typeof window !== "undefined" && window.innerWidth < MOBILE_WIDTH;
 
+  const actionsToShow = !chatMessages?.length
+    ? isMobile
+      ? getRandomItems(suggestedActions, 2)
+      : suggestedActions
+    : [];
+
   return (
     <div className="flex flex-col h-screen items-center justify-center">
       <div className="flex flex-col h-full w-full max-w-xl mx-auto">
@@ -135,42 +165,21 @@ const ChatContent = () => {
         </div>
         <div className="p-3 bg-white fixed bottom-0 left-0 right-0 z-20 w-full flex justify-center">
           <div className="w-full max-w-xl">
-            {!chatMessages?.length &&
+            {!chatMessages?.length && (
               <div data-testid="suggested-actions" className="grid sm:grid-cols-2 gap-2 w-full mb-2">
-                <div className="block">
-                <button
-                  onClick={() => handleSuggestedClick("Which companies has Simone worked for?")}
-                  className="flex flex-col  font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start " >
-                  <span className="font-medium ">Experiences</span>
-                  <span className="text-muted-foreground text-gray-500 break-words">Which companies has Simone worked for?</span>
-                </button>
-              </div>
-                <div className="block">
-                  <button 
-                    onClick={() => handleSuggestedClick("What technologies does Simone have experience with?")}
-                    className="flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50  hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
-                    <span className="font-medium">Technologies</span>
-                    <span className="text-muted-foreground text-gray-500 break-words">What technologies does Simone have experience with?</span>
-                  </button>
-                </div>
-                <div className="hidden sm:block">
-                  <button 
-                    onClick={() => handleSuggestedClick("What personal projects has Simone worked on?")}
-                    className="break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
-                    <span className="font-medium">Personal projects</span>
-                    <span className="text-muted-foreground text-gray-500">What personal projects has Simone worked on?</span>
+                {actionsToShow.map((action, i) => (
+                  <div className={`block ${!isMobile && i > 1 ? 'hidden sm:block' : ''}`} key={action.label}>
+                    <button
+                      onClick={() => handleSuggestedClick(action.text)}
+                      className="flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
+                    >
+                      <span className="font-medium">{action.label}</span>
+                      <span className="text-muted-foreground text-gray-500 break-words">{action.text}</span>
                     </button>
-                    </div>
-                    <div className="hidden sm:block" >
-                      <button 
-                        onClick={() => handleSuggestedClick("How can I contact Simone?")}
-                        className="h-full break-words flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full justify-start items-start">
-                        <span className="font-medium">Contact</span>
-                      <span className="text-muted-foreground text-gray-500 break-words">How can I contact Simone?</span>
-                  </button>
-                </div>
+                  </div>
+                ))}
               </div>
-            }
+            )}
             <div tabIndex={0}>
             <div className="flex gap-2 p-4 rounded-2xl bg-gray-100 h-24 border border-gray-200">
               <textarea
