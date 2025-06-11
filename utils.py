@@ -9,8 +9,6 @@ def structured_retriever(graph, question: str, entity_chain) -> str:
     Collects the neighborhood of entities mentioned
     in the question
     """
-    no_results = "I couldn't find any relevant information in the database"
-    
     try:
         generated_cypher = entity_chain.invoke(
             {
@@ -28,11 +26,11 @@ def structured_retriever(graph, question: str, entity_chain) -> str:
                 documents = graph.query(generated_cypher["document_distinct_query"])
                 return records, documents
 
-        return None, None
+        return None, []
     
     except Exception as ex:
         print(ex)
-        return None,None
+        return None,[]
 
     
 def grade_document(question: str, documents):
@@ -86,18 +84,24 @@ Return your response in the following JSON format:
     return result.relevant_documents
 
 
-def get_data(graph, vector_index, question: str, entity_chain):
+def get_stractered_data(graph, question: str, entity_chain):
     structured_data, documents = structured_retriever(graph, question, entity_chain)
 
-    unstructured_data = [el.page_content for el in vector_index.similarity_search(question, k=10)]
+    return structured_data, documents
+
+def get_unstructured_data(vector_index, question: str):
+    documents = vector_index.similarity_search_with_score(question)
+
+    unstructured_data = []
+    for document in documents:
+        unstructured_data.append(document[0].page_content)
     
-    print(unstructured_data)
+    return unstructured_data
 
-    if documents:
-        unstructured_data = unstructured_data + documents
+def grade_unstractered_data(question: str, unstructured_data: List[str]) -> str:
+    return grade_document(question=question, documents=unstructured_data)
 
-    documents = grade_document(question=question, documents=unstructured_data)
-
+def get_context(structured_data,documents):
     final_data = f"""Structured data:\n
     {structured_data}\n
     Unstructured data:\n

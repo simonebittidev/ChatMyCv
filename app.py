@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -10,13 +10,29 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_neo4j import Neo4jGraph, Neo4jVector
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from pydantic import BaseModel, Field
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
+from langchain_core.runnables import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
-from utils import get_data
+from utils import grade_document, get_unstructured_data, get_stractered_data, get_context
 import ssl
 from langchain.callbacks.base import BaseCallbackHandler
 from datetime import date
+import time
 from langchain_core.messages import HumanMessage, SystemMessage
+from typing import Annotated
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+    history: Optional[dict]
+    rewritten_question: Optional[str]
+    context: Optional[str]
+    data: Optional[dict]
+    structered_data: Optional[dict]
+    structered_data_documents: Optional[List[str]]
+    unstructered_data: Optional[List[str]]
+
 
 class RewrittenQuestion(BaseModel):
     rewritten_question: str = Field(
@@ -28,6 +44,8 @@ print(ssl.OPENSSL_VERSION)
 load_dotenv()
 
 app = FastAPI()
+
+neo4j_graph = Neo4jGraph(enhanced_schema=True)
 
 print(f"NEO4J_URI: {os.getenv('NEO4J_URI')}")
 print(f"NEO4J_PASSWORD: {os.getenv('NEO4J_PASSWORD')}")
@@ -56,14 +74,7 @@ class Entities(BaseModel):
         description="All the person, organization, or business entities  that " "appear in the text",
     )
 
-@app.get("/stream")
-async def stream_sse(text: str, history: str):
-    print(f"Received text: {text}")
-    print(f"Received history: {history}")
-
-    message=text
-    history = json.loads(history)
-
+def rewrite_question(state: State):
     llm_history = AzureChatOpenAI(
         azure_deployment="gpt-4.1",
         openai_api_version="2024-12-01-preview",
@@ -90,41 +101,25 @@ Your task is to analyze the user's latest question together with the conversatio
 Return your response in the following JSON format:
 
 {
-  "rewritten_question": "<the clarified version of the user's question, or the original if it was already clear>"
+"rewritten_question": "<the clarified version of the user's question, or the original if it was already clear>"
 }
 
 - The output must be only valid JSON, with no extra explanation or commentary.
 """
 
-    messages = [SystemMessage(content=rewrite_question_prompt), HumanMessage(content=f"User's input: {text}\nChat history: {history}")]
+    messages = [SystemMessage(content=rewrite_question_prompt), HumanMessage(content=f"User's input: {state['messages'][-1]}\nChat history: {state['history']}")]
 
     result = llm_history.with_structured_output(RewrittenQuestion).invoke(messages)
-    message = result.rewritten_question
-    print(f"Received message: {message}")
-    print(f"uri {os.getenv('NEO4J_URI')}")
+    rewritten_question = result.rewritten_question
+    
+    return {"rewritten_question": rewritten_question}
 
-    enhanced_graph = Neo4jGraph(enhanced_schema=True)
 
-    handler = StreamHandler()
-
+def get_structered_data(state: State):
     llm = AzureChatOpenAI(
         azure_deployment="gpt-4.1",
         openai_api_version="2024-12-01-preview",
         temperature=0.7 #more creative and less deterministic responses
-    )
-
-    embeddings_3_large : AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(
-        azure_deployment="text-embedding-3-large",
-        openai_api_version="2024-12-01-preview",
-        dimensions=3072
-    )
-
-    vector_index = Neo4jVector.from_existing_graph(
-        embedding=embeddings_3_large,
-        search_type="hybrid",
-        node_label="Document",
-        text_node_properties=["text"],
-        embedding_node_property="embedding"
     )
 
     text2cypher_prompt = ChatPromptTemplate.from_messages(
@@ -156,15 +151,39 @@ Return your answer in the following JSON format:
             ),
         ),
     ]
-)
-
-
+    )
 
     text2cypher_chain = text2cypher_prompt | llm | StrOutputParser()
 
-    today = date.today().strftime("%Y-%m-%d")
+    neo4j_graph._driver.verify_connectivity()
 
-    context = get_data(enhanced_graph, vector_index, message, text2cypher_chain)
+    structured_data, documents = get_stractered_data(neo4j_graph, state["rewritten_question"], text2cypher_chain)
+
+    return {"structered_data":structured_data, "structered_data_documents": documents}
+
+def get_unstructered_data(state: State):
+    embeddings_3_large : AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(
+        azure_deployment="text-embedding-3-large",
+        openai_api_version="2024-12-01-preview",
+        dimensions=3072
+    )
+
+    vector_index = Neo4jVector.from_existing_graph(
+        embedding=embeddings_3_large,
+        search_type="hybrid",
+        node_label="Document",
+        text_node_properties=["text"],
+        embedding_node_property="embedding"
+    )
+
+    unstructered_data = get_unstructured_data(vector_index, state["rewritten_question"])
+
+    return {"unstructered_data":unstructered_data}
+
+def generate_final_answer(state: State):
+    message = state["rewritten_question"]
+    context = state["context"]
+    today = state.get("today", date.today().isoformat())
 
     template = f"""
 You are Ask my cv, a virtual assistant designed to answer user questions about Simone. Your purpose is to provide precise, well-structured answers that help the user understand Simone's professional profile, skills, and experiences.
@@ -212,22 +231,70 @@ Context: {context}
 Today's date: {today}
 """
 
-
-    llm_stream = AzureChatOpenAI(
+    llm = AzureChatOpenAI(
         azure_deployment="gpt-4.1",
         openai_api_version="2024-12-01-preview",
-        streaming=True,
-        callbacks=[handler],
         temperature=0.7 #more creative and less deterministic responses
     )
 
-    async def event_generator():
-        llm_stream.invoke([SystemMessage(content=template)])
-        for token in handler.get():
-            yield f"data: {json.dumps({'role': 'ai', 'content': token})}\n\n"
-        yield "data: [DONE]\n\n"
+    result = llm.invoke([SystemMessage(content=template)])
+    return {"messages": result}
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+def grade_documents_and_get_context(state: State):
+    documents = state.get("structered_data_documents", []) + state.get("unstructered_data", [])
+    data = grade_document(
+        question=state["rewritten_question"],
+        documents=documents)
+    
+    context = get_context(state["structered_data"], data)
+    return {"context": context}
+
+def send_end(state: State):
+    return {"messages": "[DONE]"}
+    
+@app.get("/stream")
+async def stream_sse(text: str, history: str):
+    async def event_generator(text, history):
+        try:
+            print(f"Received text: {text}")
+            print(f"Received history: {history}")
+            
+            graph_builder = StateGraph(State)
+            graph_builder.add_node("rewrite_question", RunnableLambda(rewrite_question).with_config(tags=["nostream"]))
+            graph_builder.add_node("get_structered_data", RunnableLambda(get_structered_data).with_config(tags=["nostream"]))
+            graph_builder.add_node("get_unstructered_data", RunnableLambda(get_unstructered_data).with_config(tags=["nostream"]))
+            graph_builder.add_node("grade_documents_and_get_context", RunnableLambda(grade_documents_and_get_context).with_config(tags=["nostream"]))
+            graph_builder.add_node("generate_final_answer", generate_final_answer)
+            graph_builder.add_node("send_end", send_end)
+
+            graph_builder.add_edge(START, "rewrite_question")
+            graph_builder.add_edge("rewrite_question", "get_structered_data")
+            graph_builder.add_edge("rewrite_question", "get_unstructered_data")
+            graph_builder.add_edge("get_unstructered_data", "grade_documents_and_get_context")
+            graph_builder.add_edge("get_structered_data", "grade_documents_and_get_context")
+            graph_builder.add_edge("grade_documents_and_get_context", "generate_final_answer")
+            graph_builder.add_edge("generate_final_answer", "send_end")
+            graph_builder.add_edge("send_end", END)
+
+            graph = graph_builder.compile()
+            
+            message=text
+            history = json.loads(history)
+            
+            print(f"Received message: {message}")
+            print(f"uri {os.getenv('NEO4J_URI')}")
+            
+            async for state in graph.astream({"messages": [{"role": "user", "content": message}], "history": history}, stream_mode="messages"):
+                print("STATE STREAMED:", state)
+                token = state[0].content
+                if token:
+                    yield f"data: {json.dumps({'role': 'ai', 'content': token})}\n\n"
+        except Exception as e:
+            print(f"Error in event generator: {e}")
+            yield f"data: {json.dumps({'role': 'ai', 'content': '[ERROR]'})}\n\n"
+            yield f"data: {json.dumps({'[DONE]'})}\n\n"
+
+    return StreamingResponse(event_generator(text, history), media_type="text/event-stream")
 
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):

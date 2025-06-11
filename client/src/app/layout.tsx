@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Footer from "@/components/footer";
-import CookieWidget from "@/components/cookie-widget";
 
 export const metadata: Metadata = {
   title: "Ask my cv - Simone Bitti",

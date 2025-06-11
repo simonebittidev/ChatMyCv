@@ -16,6 +16,7 @@ const ChatContent = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isInputFocused, setInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [aiError, setAiError] = useState(false);
 
   const handleSuggestedClick = (text: string) => {
       console.log("handling click");
@@ -28,12 +29,16 @@ const ChatContent = () => {
   };
 
   const startStream = (text: string) => {
+    setAiError(false);
+
     const encodedHistory = encodeURIComponent(JSON.stringify(chatMessages.slice(-3)));
     const eventSource = new EventSource(`/stream?text=${encodeURIComponent(text)}&history=${encodedHistory}`);
   
     let currentMessage = "";
   
     eventSource.onmessage = (event) => {
+
+      console.log(event.data);
       if (event.data === "[DONE]") {
         eventSource.close();
         return;
@@ -63,6 +68,7 @@ const ChatContent = () => {
   };
 
   const handleSend = () => {
+
     if (!chatInput.trim()) return;
   
     const text = chatInput.trim();
@@ -70,6 +76,10 @@ const ChatContent = () => {
     setChatInput('');
     startStream(text);
   };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const MOBILE_WIDTH = 768;
   const isMobile = typeof window !== "undefined" && window.innerWidth < MOBILE_WIDTH;
@@ -90,7 +100,8 @@ const ChatContent = () => {
             className="flex-1 overflow-y-auto"
             ref={chatBoxRef}
             style={{
-              paddingBottom: isInputFocused && isMobile ? "235px" : "140px",
+              paddingBottom: isInputFocused && isMobile ? "220px" : "124px",
+              // transition: "padding-bottom 0.2s",
             }}
           >
             {chatMessages.map((msg, i) => (
@@ -104,13 +115,18 @@ const ChatContent = () => {
                     />
                   </div>
                 )}
-                <div
-                  className={`rounded-xl text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%] py-3' : 'text-gray-700'}`}
-                >
+
+                {msg.role === 'ai' && msg.content === '[ERROR]' ? (
+                  <div className='rounded-xl text-sm whitespace-pre-line text-red-700 mt-1'>
+                      An error occurred with the service. Please try again later.
+                  </div>
+                ): (
+                <div className={`rounded-xl text-sm whitespace-pre-line ${msg.role === 'human' ? 'bg-black text-white px-5 max-w-[80%] py-3' : 'text-gray-700'}`}>
                   <ReactMarkdown>
                     {msg.content}
                   </ReactMarkdown>
                 </div>
+                )}
               </div>
             ))}
 
@@ -188,7 +204,6 @@ const ChatContent = () => {
             <div className="mt-2 text-xs text-gray-500 text-center w-full">
               <span>
                 This is a personal study project; answers may be inaccurate.<br/>
-                For feedback or info: <a href="mailto:simone.bitti.dev@gmail.com" className="underline">simone.bitti.dev@gmail.com</a>
               </span>
             </div>
             </div>
