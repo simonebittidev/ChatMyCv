@@ -166,12 +166,12 @@ const ChatContent = () => {
         <div className="p-3 bg-white fixed bottom-0 left-0 right-0 z-20 w-full flex justify-center">
           <div className="w-full max-w-xl">
             {!chatMessages?.length && (
-              <div data-testid="suggested-actions" className="grid sm:grid-cols-2 gap-2 w-full mb-2">
+              <div data-testid="suggested-actions" className="grid sm:grid-cols-2 gap-2 w-full mb-2 items-stretch">
                 {actionsToShow.map((action, i) => (
-                  <div className={`block ${!isMobile && i > 1 ? 'hidden sm:block' : ''}`} key={action.label}>
+                  <div className={`block h-full ${!isMobile && i > 1 ? 'hidden sm:block' : ''}`} key={action.label}>
                     <button
                       onClick={() => handleSuggestedClick(action.text)}
-                      className="flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
+                      className="flex flex-col font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground text-left border border-gray-300 rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-full justify-start items-start"
                     >
                       <span className="font-medium">{action.label}</span>
                       <span className="text-muted-foreground text-gray-500 break-words">{action.text}</span>
