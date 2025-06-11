@@ -17,7 +17,7 @@ import ssl
 from langchain.callbacks.base import BaseCallbackHandler
 from datetime import date
 import time
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from typing import Annotated
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
@@ -32,6 +32,7 @@ class State(TypedDict):
     structered_data: Optional[dict]
     structered_data_documents: Optional[List[str]]
     unstructered_data: Optional[List[str]]
+    is_end: Optional[bool]
 
 
 class RewrittenQuestion(BaseModel):
@@ -250,7 +251,7 @@ def grade_documents_and_get_context(state: State):
     return {"context": context}
 
 def send_end(state: State):
-    return {"messages": "[DONE]"}
+    return {"messages": AIMessage(content="[DONE]")}
     
 @app.get("/stream")
 async def stream_sse(text: str, history: str):
@@ -288,11 +289,14 @@ async def stream_sse(text: str, history: str):
                 print("STATE STREAMED:", state)
                 token = state[0].content
                 if token:
-                    yield f"data: {json.dumps({'role': 'ai', 'content': token})}\n\n"
+                    if token == "[DONE]":
+                        yield "data: [DONE]\n\n"
+                    else:
+                        yield f"data: {json.dumps({'role': 'ai', 'content': token})}\n\n"
         except Exception as e:
             print(f"Error in event generator: {e}")
             yield f"data: {json.dumps({'role': 'ai', 'content': '[ERROR]'})}\n\n"
-            yield f"data: {json.dumps({'[DONE]'})}\n\n"
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(text, history), media_type="text/event-stream")
 

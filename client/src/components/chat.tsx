@@ -85,7 +85,7 @@ const ChatContent = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < MOBILE_WIDTH;
 
   return (
-    <div className="flex flex-col h-screen items-center justify-center mt-10">
+    <div className="flex flex-col h-screen items-center justify-center">
       <div className="flex flex-col h-full w-full max-w-xl mx-auto">
         <div className="h-16 w-full mt-5 p-3">
           {!chatMessages?.length &&
