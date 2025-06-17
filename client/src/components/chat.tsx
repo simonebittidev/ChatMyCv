@@ -108,11 +108,15 @@ const ChatContent = () => {
   const MOBILE_WIDTH = 768;
   const isMobile = typeof window !== "undefined" && window.innerWidth < MOBILE_WIDTH;
 
-  const actionsToShow = !chatMessages?.length
-    ? isMobile
+  // Initialize suggested actions only once on first render
+  const [actionsToShow] = useState<{
+    label: string;
+    text: string;
+  }[]>(() => {
+    return isMobile
       ? getRandomItems(suggestedActions, 2)
-      : suggestedActions
-    : [];
+      : suggestedActions;
+  });
 
   return (
     <div className="flex flex-col h-screen items-center justify-center">

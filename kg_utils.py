@@ -1,50 +1,24 @@
 import base64
 from datetime import date
-import json
 from typing import List
 import fitz
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_experimental.graph_transformers import LLMGraphTransformer
-from langchain_neo4j import Neo4jGraph, Neo4jVector
+from langchain_neo4j import Neo4jGraph
 import asyncio
 from langchain_core.documents import Document
-from langchain_neo4j import GraphCypherQAChain
 import os
-from io import BytesIO
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.vectorstores import InMemoryVectorStore
-from langchain_community.document_loaders import TextLoader
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import CharacterTextSplitter, MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
+
+from models.llm_models import DocumentSummary, ChunkedSummary
 
 
 FILES_FOLDER = "files/Simone Bitti"
 
-
-class DocumentSummary(BaseModel):
-    brief_overview: str = Field(
-        description="A brief summary (2-3 sentences) that describes the entire content of the document."
-    )
-    detailed_summary: str = Field(
-        description="A detailed summary covering all information present in the document."
-    )
-
-class Chunk(BaseModel):
-    title: str = Field(description="A short, descriptive title for this chunk")
-    content: str = Field(description="The text content of this chunk")
-    keywords: List[str] = Field(description="The keywords extracted from the content of this chunk")
-
-class ChunkedSummary(BaseModel):
-    chunks: List[Chunk] = Field(
-        description="A list of semantically meaningful chunks, each with a title and content"
-    )
 
 def summarize_document(html_pages):
     llm = AzureChatOpenAI(

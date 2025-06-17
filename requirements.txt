@@ -8,12 +8,10 @@ python-dotenv
 tqdm
 fastapi
 uvicorn[standard]
-python-dotenv
 gunicorn
 langchain-neo4j
 neo4j
 PyMuPDF
 pypdf
 langchain-unstructured
-markitdown[all]
-pdfplumber
+APScheduler

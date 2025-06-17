@@ -32,7 +32,6 @@ def structured_retriever(graph, question: str, entity_chain) -> str:
         print(ex)
         return None,[]
 
-    
 def grade_document(question: str, documents):
 
     llm = AzureChatOpenAI(
@@ -82,7 +81,6 @@ Return your response in the following JSON format:
     )
 
     return result.relevant_documents
-
 
 def get_stractered_data(graph, question: str, entity_chain):
     structured_data, documents = structured_retriever(graph, question, entity_chain)

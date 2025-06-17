@@ -12,6 +12,7 @@ from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from pydantic import BaseModel, Field
 from langchain_core.runnables import RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
+from models.llm_models import RewrittenQuestion
 from utils import grade_document, get_unstructured_data, get_stractered_data, get_context
 import ssl
 from langchain.callbacks.base import BaseCallbackHandler
@@ -22,6 +23,8 @@ from typing import Annotated
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -35,22 +38,29 @@ class State(TypedDict):
     is_end: Optional[bool]
 
 
-class RewrittenQuestion(BaseModel):
-    rewritten_question: str = Field(
-        description="The clarified and rephrased version of the user's question, rewritten for maximum clarity based on conversation context."
-    )
-
 print(ssl.OPENSSL_VERSION)
 
 load_dotenv()
 
 app = FastAPI()
 
-neo4j_graph = Neo4jGraph(enhanced_schema=True)
-
 print(f"NEO4J_URI: {os.getenv('NEO4J_URI')}")
 print(f"NEO4J_PASSWORD: {os.getenv('NEO4J_PASSWORD')}")
 print(f"NEO4J_USERNAME: {os.getenv('NEO4J_USERNAME')}")
+
+neo4j_graph = Neo4jGraph(enhanced_schema=True)
+
+# Scheduler to keep Neo4j Aura instance alive
+scheduler = BackgroundScheduler()
+def keep_neo4j_alive():
+    # Execute a simple Cypher query to keep the connection active
+    with neo4j_graph._driver.session() as session:
+        session.run("RETURN 1")
+        print("Keeping Neo4j Aura instance alive...")
+        
+# Schedule the job to run once every day
+scheduler.add_job(keep_neo4j_alive, "interval", days=1, next_run_time=datetime.now())
+scheduler.start()
 
 # Serve React app (build)
 client_path = Path("client/out")
@@ -66,14 +76,6 @@ class StreamHandler(BaseCallbackHandler):
     def get(self):
         while self.queue:
             yield self.queue.pop(0)
-
-class Entities(BaseModel):
-    """Identifying information about entities."""
-
-    names: List[str] = Field(
-        ...,
-        description="All the person, organization, or business entities  that " "appear in the text",
-    )
 
 def rewrite_question(state: State):
     llm_history = AzureChatOpenAI(
@@ -114,7 +116,6 @@ Return your response in the following JSON format:
     rewritten_question = result.rewritten_question
     
     return {"rewritten_question": rewritten_question}
-
 
 def get_structered_data(state: State):
     llm = AzureChatOpenAI(
