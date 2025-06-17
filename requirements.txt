@@ -14,4 +14,3 @@ neo4j
 PyMuPDF
 pypdf
 langchain-unstructured
-APScheduler
