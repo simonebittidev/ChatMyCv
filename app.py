@@ -48,7 +48,7 @@ print(f"NEO4J_URI: {os.getenv('NEO4J_URI')}")
 print(f"NEO4J_PASSWORD: {os.getenv('NEO4J_PASSWORD')}")
 print(f"NEO4J_USERNAME: {os.getenv('NEO4J_USERNAME')}")
 
-neo4j_graph = Neo4jGraph(enhanced_schema=True)
+neo4j_graph = Neo4jGraph(enhanced_schema=True, driver_config={"max_connection_lifetime": 180})
 
 # Scheduler to keep Neo4j Aura instance alive
 scheduler = BackgroundScheduler()
