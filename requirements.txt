@@ -12,4 +12,5 @@ gunicorn
 langchain-neo4j
 neo4j
 PyMuPDF
+pandas
 apscheduler
