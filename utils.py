@@ -3,6 +3,19 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from pydantic import BaseModel, Field
 from typing import List
+import threading
+
+
+
+def execute_query(graph_obj, query, result_list, index):
+    """Funzione helper per eseguire una query e salvare il risultato."""
+    try:
+        records = graph_obj.query(query)
+        result_list[index] = records
+    except Exception as e:
+        print(f"Errore durante l'esecuzione della query: {e}")
+        result_list[index] = None # O un indicatore di errore specifico
+
 
 def structured_retriever(graph, question: str, entity_chain) -> str:
     """
@@ -19,12 +32,27 @@ def structured_retriever(graph, question: str, entity_chain) -> str:
 
         if generated_cypher:
             generated_cypher = json.loads(generated_cypher)
-            
-            records = graph.query(generated_cypher["main_query"])
 
-            if records:
-                documents = graph.query(generated_cypher["document_distinct_query"])
-                return records, documents
+            main_query = generated_cypher["main_query"]
+            document_distinct_query = generated_cypher["document_distinct_query"]
+            
+            results = [None, None] # results[0] per main_query, results[1] per document_distinct_query
+
+            thread1 = threading.Thread(target=execute_query, args=(graph, main_query, results, 0))
+            thread2 = threading.Thread(target=execute_query, args=(graph, document_distinct_query, results, 1))
+
+            # Avvia i thread
+            thread1.start()
+            thread2.start()
+
+            # Attendi che entrambi i thread abbiano completato l'esecuzione
+            thread1.join()
+            thread2.join()
+
+            records = results[0]
+            documents = results[1]
+
+            return records, documents
 
         return None, []
     

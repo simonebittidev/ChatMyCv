@@ -244,11 +244,13 @@ Today's date: {today}
 
 def grade_documents_and_get_context(state: State):
     documents = state.get("structered_data_documents", []) + state.get("unstructered_data", [])
-    data = grade_document(
-        question=state["rewritten_question"],
-        documents=documents)
+    # data = grade_document(
+    #     question=state["rewritten_question"],
+    #     documents=documents)
     
-    context = get_context(state["structered_data"], data)
+    # context = get_context(state["structered_data"], data)
+    context = get_context(state["structered_data"], documents)
+
     return {"context": context}
 
 def send_end(state: State):
