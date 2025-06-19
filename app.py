@@ -244,12 +244,12 @@ Today's date: {today}
 
 def grade_documents_and_get_context(state: State):
     documents = state.get("structered_data_documents", []) + state.get("unstructered_data", [])
-    # data = grade_document(
-    #     question=state["rewritten_question"],
-    #     documents=documents)
+    data = grade_document(
+        question=state["rewritten_question"],
+        documents=documents)
     
-    # context = get_context(state["structered_data"], data)
-    context = get_context(state["structered_data"], documents)
+    context = get_context(state["structered_data"], data)
+    # context = get_context(state["structered_data"], documents)
 
     return {"context": context}
 
@@ -290,6 +290,7 @@ async def stream_sse(text: str, history: str):
             
             async for state in graph.astream({"messages": [{"role": "user", "content": message}], "history": history}, stream_mode="messages"):
                 print("STATE STREAMED:", state)
+
                 token = state[0].content
                 if token:
                     if token == "[DONE]":
