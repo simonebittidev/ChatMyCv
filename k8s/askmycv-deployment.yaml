@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: askmycv
+  labels:
+    app: askmycv
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: askmycv
+  template:
+    metadata:
+      labels:
+        app: askmycv
+    spec:
+      containers:
+      - name: askmycv
+        image: simoneacr.azurecr.io/askmycv:latest
+        ports:
+        - containerPort: 5005
+        env:
+        - name: AZURE_OPENAI_ENDPOINT
+          value: "https://pocs-openai-simo.openai.azure.com/"
+        - name: NEO4J_URI
+          value: "neo4j+s://5e4610f3.databases.neo4j.io:7687"
+        - name: NEO4J_USERNAME
+          value: "neo4j"
+        - name: LANGSMITH_TRACING
+          value: "true"
+        - name: LANGSMITH_PROJECT
+          value: "pr-vacant-starter-88"
+        - name: LANGSMITH_ENDPOINT
+          value: "https://api.smith.langchain.com"
+        - name: AZURE_OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: askmycv-secrets
+              key: AZURE_OPENAI_API_KEY
+        - name: NEO4J_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: askmycv-secrets
+              key: NEO4J_PASSWORD
+        - name: LANGSMITH_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: askmycv-secrets
+              key: LANGSMITH_API_KEY
+      imagePullSecrets:
+        - name: acr-auth

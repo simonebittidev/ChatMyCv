@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: askmycv-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true" # Redirect HTTP to HTTPS
+spec:
+  tls:
+    - hosts:
+      - askmycv.chat
+      secretName: askmycv-chat-tls
+  ingressClassName: nginx
+  rules:
+  - host: askmycv.chat
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: askmycv-service
+            port:
+              number: 80

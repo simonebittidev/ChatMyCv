@@ -5,8 +5,6 @@ from pydantic import BaseModel, Field
 from typing import List
 import threading
 
-
-
 def execute_query(graph_obj, query, result_list, index):
     """Funzione helper per eseguire una query e salvare il risultato."""
     try:
@@ -15,7 +13,6 @@ def execute_query(graph_obj, query, result_list, index):
     except Exception as e:
         print(f"Errore durante l'esecuzione della query: {e}")
         result_list[index] = None # O un indicatore di errore specifico
-
 
 def structured_retriever(graph, question: str, entity_chain) -> str:
     """
