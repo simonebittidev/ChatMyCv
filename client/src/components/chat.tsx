@@ -49,13 +49,14 @@ const ChatContent = () => {
         { role: 'human', content: text },
         { role: 'ai', content: '' }
       ]);
-      startStream(text);
+      const history = [...chatMessages, { role: 'human', content: text }];
+      startStream(text, history);
   };
 
-  const startStream = (text: string) => {
+  const startStream = (text: string, historyMessages: ChatMessage[]) => {
     setAiError(false);
 
-    const encodedHistory = encodeURIComponent(JSON.stringify(chatMessages.slice(-3)));
+    const encodedHistory = encodeURIComponent(JSON.stringify(historyMessages.slice(-3)));
     const eventSource = new EventSource(`/stream?text=${encodeURIComponent(text)}&history=${encodedHistory}`);
   
     let currentMessage = "";
@@ -98,7 +99,8 @@ const ChatContent = () => {
     const text = chatInput.trim();
     setChatMessages((prev) => [...prev, { role: 'human', content: text }, { role: 'ai', content: '' }]);
     setChatInput('');
-    startStream(text);
+    const history = [...chatMessages, { role: 'human', content: text }];
+    startStream(text, history);
   };
 
   useEffect(() => {
