@@ -1,4 +1,4 @@
-# AskMyCv
+# ChatMyCv
 
 A personal study project that turns your CV and cover letter into an interactive knowledge graph you can query via a chat interface.
 
@@ -6,7 +6,7 @@ A personal study project that turns your CV and cover letter into an interactive
 
 ## 🚀 Overview
 
-**AskMyCv** is a chat-bot application that lets you explore my professional background, skills and projects by asking natural-language questions. Under the hood:
+**ChatMyCv** is a chat-bot application that lets you explore my professional background, skills and projects by asking natural-language questions. Under the hood:
 
 1. **Extraction** of entities and relationships from PDF CVs, cover letters—and soon GitHub READMEs—using a Large Language Model.  
 2. **Storage** in a Neo4j knowledge graph, where experiences, skills and projects become connected nodes.  
@@ -25,7 +25,7 @@ This project is purely experimental, a playground for combining NLP, graph datab
   - Neo4j Aura (cloud-hosted)  
   - APScheduler (to keep the Aura instance “warm”)  
   - LangGraph (flow orchestration)  
-  - OpenAI GPT (or any LLM) for NLP tasks  
+  - Azure OpenAI GPT for NLP tasks
 
 - **Frontend**:  
   - Next.js / React / TypeScript  
@@ -38,8 +38,8 @@ This project is purely experimental, a playground for combining NLP, graph datab
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/your-username/AskMyCv.git
-cd AskMyCv
+git clone https://github.com/your-username/ChatMyCv.git
+cd ChatMyCv
 ```
 
 ### 2. Backend setup
@@ -55,10 +55,16 @@ cd AskMyCv
   2.	Set environment variables in a .env file:
 
   ```dotenv
+  AZURE_OPENAI_ENDPOINT=<your-azure-openai-endpoint>
+  AZURE_OPENAI_API_KEY=<your-azure-openai-api-key>
   NEO4J_URI=<your-neo4j-aura-uri>
-  NEO4J_USER=<username>
+  NEO4J_USERNAME=<username>
   NEO4J_PASSWORD=<password>
-  OPENAI_API_KEY=<your-openai-key>
+  # Optional LangSmith tracing
+  LANGSMITH_TRACING=true
+  LANGSMITH_ENDPOINT=<your-langsmith-endpoint>
+  LANGSMITH_API_KEY=<your-langsmith-api-key>
+  LANGSMITH_PROJECT=<your-langsmith-project>
   ```
 
   3.	Start the FastAPI server:
