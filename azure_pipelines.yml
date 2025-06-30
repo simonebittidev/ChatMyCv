@@ -27,6 +27,8 @@ stages:
   displayName: Deploy to AKS
   dependsOn: Build
   jobs:
+  - script: ls -lR
+      displayName: "Elenca TUTTI i file (ricorsivo)"
   - job: Deploy
     pool:
       vmImage: 'ubuntu-latest'
@@ -46,8 +48,3 @@ stages:
           askmycv-deployment.yaml
           askmycv-service.yaml
           askmycv-ingress.yaml
-    # Aggiungi questi due task per debug
-    - bash: |
-        pwd
-        ls -R $(System.DefaultWorkingDirectory)
-      displayName: 'List files in working directory'
