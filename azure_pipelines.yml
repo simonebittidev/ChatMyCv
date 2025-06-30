@@ -62,6 +62,8 @@ stages:
               action: createSecret
               connectionType: azureResourceManager
               azureSubscriptionEndpoint: '$(kubernetesServiceConnection)'
+              azureResourceGroup: 'pocs_abozar_simone_rg'   # <-- aggiungi
+              kubernetesCluster: 'k8s-cluster'   
               secretType: dockerRegistry
               secretName: '$(imagePullSecret)'
               dockerRegistryEndpoint: '$(dockerRegistryServiceConnection)'
@@ -73,6 +75,8 @@ stages:
               action: deploy
               connectionType: azureResourceManager
               azureSubscriptionEndpoint: '$(kubernetesServiceConnection)'
+              azureResourceGroup: 'pocs_abozar_simone_rg'   # <-- aggiungi
+              kubernetesCluster: 'k8s-cluster'   
               manifests: |
                 $(Pipeline.Workspace)/manifests/deployment.yaml
                 $(Pipeline.Workspace)/manifests/service.yaml
