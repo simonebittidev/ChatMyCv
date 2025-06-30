@@ -43,6 +43,6 @@ stages:
         command: apply
         useConfigurationFile: true
         configuration: |
-          k8s/askmycv-deployment.yaml
-          k8s/askmycv-service.yaml
-          k8s/askmycv-ingress.yaml
+          askmycv-deployment.yaml
+          askmycv-service.yaml
+          askmycv-ingress.yaml
