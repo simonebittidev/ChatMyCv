@@ -44,7 +44,7 @@ stages:
     displayName: Deploy job
     pool:
       vmImage: $(vmImageName)
-    # environment: 'prod.aks-default'                 # personalizza se usi gli Environment di DevOps
+    environment: 'askmycv'
     strategy:
       runOnce:
         deploy:
