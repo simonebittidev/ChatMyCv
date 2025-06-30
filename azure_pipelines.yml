@@ -5,6 +5,14 @@ trigger:
 
 variables:
   imageName: askmycv
+  vmImageName: 'ubuntu-latest'
+  imageRepository: 'askmycv'
+  containerRegistry: 'simoneacr.azurecr.io'          # URL del tuo ACR
+  dockerRegistryServiceConnection: 'simoneacr-connection'   # Service Connection di tipo Docker Registry
+  kubernetesServiceConnection: 'azure-aks-arm-connection'   # Service Connection di tipo Azure RM
+  imagePullSecret: 'acr-auth'
+  tag: '$(Build.BuildId)'                           # <-- tag unico ad ogni build
+
 
 stages:
 - stage: Build
@@ -23,25 +31,52 @@ stages:
         containerRegistry: 'simoneacr-connection'
         tags: latest
 
+    - task: PublishPipelineArtifact@1
+      inputs:
+        artifactName: 'manifests'
+        path: 'manifests'
+
 - stage: Deploy
-  displayName: Deploy to AKS
+  displayName: Deploy stage
   dependsOn: Build
   jobs:
-    - job: Deploy
-      pool:
-        vmImage: 'ubuntu-latest'
-      steps:
-        - script: ls -lR
-          displayName: "Elenca tutti i file"
-        - task: AzureCLI@2
-          displayName: 'Kubectl apply manifests'
-          inputs:
-            azureSubscription: 'azure-aks-arm-connection'   # Nome della Service Connection ARM!
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              az aks get-credentials --resource-group pocs_abozar_simone_rg --name k8s-cluster --admin --overwrite-existing
-              kubectl apply -f kubernetes/askmycv-deployment.yaml
-              kubectl apply -f kubernetes/askmycv-service.yaml
-              kubectl apply -f kubernetes/askmycv-ingress.yaml
+  - deployment: Deploy
+    displayName: Deploy job
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'prod.aks-default'                 # personalizza se usi gli Environment di DevOps
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Scarica i manifest (generati nello stage Build o commitati nel repo)
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: 'manifests'
+              downloadPath: '$(Pipeline.Workspace)/manifests'
+
+          # (Una tantum) crea/aggiorna l'imagePullSecret nel cluster
+          - task: KubernetesManifest@1
+            displayName: Create imagePullSecret
+            inputs:
+              action: createSecret
+              connectionType: kubernetesServiceConnection
+              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+              secretType: dockerRegistry
+              secretName: '$(imagePullSecret)'
+              dockerRegistryEndpoint: '$(dockerRegistryServiceConnection)'
+
+          # Deploy: patch del Deployment con il nuovo tag ⇒ rollout automatico
+          - task: KubernetesManifest@1
+            displayName: Deploy to AKS
+            inputs:
+              action: deploy
+              connectionType: kubernetesServiceConnection
+              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yaml
+                $(Pipeline.Workspace)/manifests/service.yaml
+                $(Pipeline.Workspace)/manifests/ingress.yaml
+              containers: '$(containerRegistry)/$(imageRepository):$(tag)'   # <-- patch
+              imagePullSecrets: '$(imagePullSecret)'
 
