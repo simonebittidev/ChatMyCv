@@ -22,11 +22,6 @@ stages:
         dockerfile: '**/Dockerfile'
         containerRegistry: 'simoneacr-connection'
         tags: latest
-        
-    - task: PublishPipelineArtifact@1
-      inputs:
-        artifactName: 'manifests'
-        path: 'manifests'
 
 - stage: Deploy
   displayName: Deploy to AKS
