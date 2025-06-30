@@ -33,7 +33,7 @@ stages:
     steps:
     - script: ls -lR
       displayName: "Elenca TUTTI i file (ricorsivo)"
-    - task: Kubernetes@1
+    - task: Kubectl@1
       displayName: Deploy to AKS
       inputs:
         connectionType: 'Azure Resource Manager'
@@ -42,5 +42,5 @@ stages:
         kubernetesCluster: 'k8s-cluster'
         namespace: 'default'
         command: apply
-        useConfigurationFile: true
-        configuration: 'kubernetes/askmycv-deployment.yaml kubernetes/askmycv-service.yaml kubernetes/askmycv-ingress.yaml'
+        arguments: '-f kubernetes/askmycv-deployment.yaml -f kubernetes/askmycv-service.yaml -f kubernetes/askmycv-ingress.yaml'
+
