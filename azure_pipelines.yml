@@ -46,3 +46,8 @@ stages:
           askmycv-deployment.yaml
           askmycv-service.yaml
           askmycv-ingress.yaml
+    # Aggiungi questi due task per debug
+    - bash: |
+        pwd
+        ls -R $(System.DefaultWorkingDirectory)
+      displayName: 'List files in working directory'
