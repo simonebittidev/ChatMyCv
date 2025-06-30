@@ -27,12 +27,12 @@ stages:
   displayName: Deploy to AKS
   dependsOn: Build
   jobs:
-  - script: ls -lR
-      displayName: "Elenca TUTTI i file (ricorsivo)"
   - job: Deploy
     pool:
       vmImage: 'ubuntu-latest'
     steps:
+    - script: ls -lR
+      displayName: "Elenca TUTTI i file (ricorsivo)"
     - task: Kubernetes@1
       displayName: Deploy to AKS
       inputs:
