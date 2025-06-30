@@ -22,25 +22,31 @@ stages:
         dockerfile: '**/Dockerfile'
         containerRegistry: 'simoneacr-connection'
         tags: latest
+        
+    - task: PublishPipelineArtifact@1
+      inputs:
+        artifactName: 'manifests'
+        path: 'manifests'
 
 - stage: Deploy
   displayName: Deploy to AKS
   dependsOn: Build
   jobs:
-  - job: Deploy
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - script: ls -lR
-      displayName: "Elenca TUTTI i file (ricorsivo)"
-    - task: Kubectl@1
-      displayName: Deploy to AKS
-      inputs:
-        connectionType: 'Azure Resource Manager'
-        azureSubscriptionEndpoint: 'azure-aks-arm-connection'
-        azureResourceGroup: 'pocs_abozar_simone_rg'
-        kubernetesCluster: 'k8s-cluster'
-        namespace: 'default'
-        command: apply
-        arguments: '-f kubernetes/askmycv-deployment.yaml -f kubernetes/askmycv-service.yaml -f kubernetes/askmycv-ingress.yaml'
+    - job: Deploy
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - script: ls -lR
+          displayName: "Elenca tutti i file"
+        - task: AzureCLI@2
+          displayName: 'Kubectl apply manifests'
+          inputs:
+            azureSubscription: 'azure-aks-arm-connection'   # Nome della Service Connection ARM!
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              az aks get-credentials --resource-group pocs_abozar_simone_rg --name k8s-cluster --admin --overwrite-existing
+              kubectl apply -f kubernetes/askmycv-deployment.yaml
+              kubectl apply -f kubernetes/askmycv-service.yaml
+              kubectl apply -f kubernetes/askmycv-ingress.yaml
 
