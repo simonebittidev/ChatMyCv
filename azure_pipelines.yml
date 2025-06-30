@@ -20,7 +20,7 @@ stages:
         command: buildAndPush
         repository: $(imageName)
         dockerfile: '**/Dockerfile'
-        containerRegistry: 'simoneacr.azurecr.io'
+        containerRegistry: 'azure-aks-connection'
         tags: latest
 
 - stage: Deploy
