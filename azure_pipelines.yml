@@ -37,7 +37,6 @@ stages:
       displayName: Deploy to AKS
       inputs:
         connectionType: 'Azure Resource Manager'
-        azureSubscription: 'azure-aks-connection'
         azureSubscriptionEndpoint: 'azure-aks-arm-connection'
         azureResourceGroup: 'pocs_abozar_simone_rg'
         kubernetesCluster: 'k8s-cluster'
