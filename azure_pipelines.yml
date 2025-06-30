@@ -43,4 +43,4 @@ stages:
         namespace: 'default'
         command: apply
         useConfigurationFile: true
-        configuration: '**/askmycv-*.yaml'
+        configuration: 'kubernetes/askmycv-deployment.yaml kubernetes/askmycv-service.yaml kubernetes/askmycv-ingress.yaml'
