@@ -1,110 +1,47 @@
-# Python to Linux Web App on Azure
-# Build your Python project and deploy it to Azure as a Linux Web App.
-# Change python version to one thats appropriate for your application.
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
-
 trigger:
-- main
+  branches:
+    include:
+      - main
 
 variables:
-  # Azure Resource Manager connection created during pipeline creation
-  azureServiceConnectionId: 'f6d060a3-6103-45b8-bf28-f590754e524a'
-
-  # Web app name
-  webAppName: 'askmycv'
-
-  # Agent VM image name
-  vmImageName: 'ubuntu-latest'
-
-  # Environment name
-  environmentName: 'askmycv'
-
-  # Project root folder. Point to the folder containing manage.py file.
-  projectRoot: $(System.DefaultWorkingDirectory)
-
-  pythonVersion: '3.11'
+  imageName: askmycv
 
 stages:
 - stage: Build
-  displayName: Build stage
+  displayName: Build & Push Docker Image
   jobs:
-  - job: BuildJob
+  - job: Build
     pool:
-      vmImage: $(vmImageName)
+      vmImage: 'ubuntu-latest'
     steps:
-    - task: UsePythonVersion@0
+    - task: Docker@2
+      displayName: Build and push image
       inputs:
-        versionSpec: '$(pythonVersion)'
-      displayName: 'Use Python $(pythonVersion)'
-    
-    - task: UseNode@1
-      inputs:
-        version: '18.x'
-      displayName: 'Use Node.js'
-
-    - script: |
-        python -m venv antenv
-        source antenv/bin/activate
-        python -m pip install --upgrade pip
-        pip install setup
-        pip install -r requirements.txt
-      workingDirectory: $(projectRoot)
-      displayName: "Install requirements"
-
-    - script: |
-        npm ci
-        npm run build
-      displayName: 'Build static frontend (Next.js)'
-      workingDirectory: $(projectRoot)/client
-      env:
-        NEXT_PUBLIC_FIREBASE_API_KEY: $(NEXT_PUBLIC_FIREBASE_API_KEY)
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: $(NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: $(NEXT_PUBLIC_FIREBASE_PROJECT_ID)
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: $(NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: $(NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID)
-        NEXT_PUBLIC_FIREBASE_APP_ID: $(NEXT_PUBLIC_FIREBASE_APP_ID)
-    
-    - task: ArchiveFiles@2
-      displayName: 'Archive static frontend'
-      inputs:
-        rootFolderOrFile: '$(projectRoot)/client/out'
-        includeRootFolder: false
-        archiveType: zip
-        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-        replaceExistingArchive: true
-    
-    - script: |
-        zip -r $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip . \
-          -x "**/node_modules/**" \
-      workingDirectory: $(projectRoot)
-      displayName: "Zip project with exclusions"
-
-    - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-      displayName: 'Upload package'
-      artifact: drop
+        command: buildAndPush
+        repository: $(imageName)
+        dockerfile: '**/Dockerfile'
+        containerRegistry: 'simoneacr.azurecr.io'
+        tags: latest
 
 - stage: Deploy
-  displayName: 'Deploy Web App'
+  displayName: Deploy to AKS
   dependsOn: Build
-  condition: succeeded()
   jobs:
-  - deployment: DeploymentJob
+  - job: Deploy
     pool:
-      vmImage: $(vmImageName)
-    environment: $(environmentName)
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-
-          - task: UsePythonVersion@0
-            inputs:
-              versionSpec: '$(pythonVersion)'
-            displayName: 'Use Python version'
-
-          - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App : askmycv'
-            inputs:
-              azureSubscription: $(azureServiceConnectionId)
-              appName: $(webAppName)
-              package: $(Pipeline.Workspace)/drop/$(Build.BuildId).zip
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: Kubernetes@1
+      displayName: Deploy to AKS
+      inputs:
+        connectionType: 'Azure Resource Manager'
+        azureSubscription: 'azure-aks-connection'
+        azureResourceGroup: 'pocs_abozar_simone_rg'
+        kubernetesCluster: 'k8s-cluster'
+        namespace: 'default'
+        command: apply
+        useConfigurationFile: true
+        configuration: |
+          k8s/askmycv-deployment.yaml
+          k8s/askmycv-service.yaml
+          k8s/askmycv-ingress.yaml
