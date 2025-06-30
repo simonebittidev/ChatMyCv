@@ -36,6 +36,7 @@ stages:
       inputs:
         connectionType: 'Azure Resource Manager'
         azureSubscription: 'azure-aks-connection'
+        azureSubscriptionEndpoint: 'azure-aks-connection'
         azureResourceGroup: 'pocs_abozar_simone_rg'
         kubernetesCluster: 'k8s-cluster'
         namespace: 'default'
