@@ -19,8 +19,6 @@ variables:
   imagePullSecret: 'acr-auth'
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
-  IMAGE_TAG: $(tag)
-
 
 stages:
 - stage: Build
@@ -58,18 +56,6 @@ stages:
       runOnce:
         deploy:
           steps:
-          - download: current
-            artifact: manifests
-
-          - task: qetza.replacetokens.replacetokens-task.replacetokens@5
-            displayName: 'Sostituisci il tag dell\'immagine nel manifesto'
-            inputs:
-              rootDirectory: '$(Pipeline.Workspace)/manifests'
-              targetFiles: '**/deployment.yml'
-              tokenPrefix: '__'
-              tokenSuffix: '__'
-              tokenPattern: 'custom'
-              actionOnMissing: 'warn'
 
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
