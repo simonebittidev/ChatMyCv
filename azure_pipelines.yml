@@ -15,7 +15,7 @@ variables:
   imageRepository: 'askmycv'
   containerRegistry: 'simoneacr.azurecr.io'
   dockerfilePath: '**/Dockerfile'
-  tag: '$(Build.BuildId)'
+  tag: 'latest' #'$(Build.BuildId)'
   imagePullSecret: 'acr-auth'
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
