@@ -17,9 +17,9 @@ variables:
   dockerfilePath: '**/Dockerfile'
   tag: '$(Build.BuildId)'
   imagePullSecret: 'acr-auth'
-
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
+  IMAGE_TAG: $(tag)
 
 
 stages:
@@ -60,16 +60,16 @@ stages:
           steps:
           - download: current
             artifact: manifests
-            
-          - task: ReplaceTokens@1
-            displayName: 'Sostituisci il tag dell''immagine nel manifesto'
+
+          - task: qetza.replacetokens.replacetokens-task.replacetokens@5
+            displayName: 'Sostituisci il tag dell\'immagine nel manifesto'
             inputs:
-              rootDirectory: '$(Pipeline.Workspace)/manifests' # Directory dove si trovano i manifesti
-              targetFiles: '**/deployment.yml' # File in cui sostituire i token
-              tokenPrefix: '__' # Prefisso del token (es. __TOKEN__)
-              tokenSuffix: '__' # Suffisso del token (es. __TOKEN__)
-            variables:
-              IMAGE_TAG: $(tag) # Mappa la variabile della pipeline al token
+              rootDirectory: '$(Pipeline.Workspace)/manifests'
+              targetFiles: '**/deployment.yml'
+              tokenPrefix: '__'
+              tokenSuffix: '__'
+              tokenPattern: 'custom'
+              actionOnMissing: 'warn'
 
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
