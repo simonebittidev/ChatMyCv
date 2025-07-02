@@ -15,10 +15,12 @@ variables:
   imageRepository: 'askmycv'
   containerRegistry: 'simoneacr.azurecr.io'
   dockerfilePath: '**/Dockerfile'
-  tag: 'latest' #'$(Build.BuildId)'
+  tag: '$(Build.BuildId)'
+  IMAGE_TAG: $(tag)
   imagePullSecret: 'acr-auth'
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
+
 
 stages:
 - stage: Build
@@ -56,6 +58,14 @@ stages:
       runOnce:
         deploy:
           steps:
+          - download: current
+            artifact: manifests
+
+          - script: |
+              echo "Aggiorno il tag dell'immagine in deployment.yaml con Build.BuildId=$(Build.BuildId)"
+              sed -i "s|image: simoneacr.azurecr.io/askmycv:.*|image: simoneacr.azurecr.io/askmycv:$(Build.BuildId)|" $(Pipeline.Workspace)/manifests/deployment.yml
+              cat $(Pipeline.Workspace)/manifests/deployment.yml
+            displayName: 'Aggiorna tag immagine nel manifest'
 
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
