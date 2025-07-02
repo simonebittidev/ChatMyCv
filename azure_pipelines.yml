@@ -58,16 +58,19 @@ stages:
       runOnce:
         deploy:
           steps:
-          - task: replacetokens@5
-            displayName: 'Replace image tag token'
+          - download: current
+            artifact: manifests
+            
+          - task: ReplaceTokens@1
+            displayName: 'Sostituisci il tag dell''immagine nel manifesto'
             inputs:
-              targetFiles: '$(Pipeline.Workspace)/manifests/deployment.yml'
-              encoding: 'auto'
-              tokenPattern: 'custom'
-              tokenPrefix: '__'
-              tokenSuffix: '__'
-              writeBOM: true
-              
+              rootDirectory: '$(Pipeline.Workspace)/manifests' # Directory dove si trovano i manifesti
+              targetFiles: '**/deployment.yml' # File in cui sostituire i token
+              tokenPrefix: '__' # Prefisso del token (es. __TOKEN__)
+              tokenSuffix: '__' # Suffisso del token (es. __TOKEN__)
+            variables:
+              IMAGE_TAG: $(tag) # Mappa la variabile della pipeline al token
+
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
             inputs:
