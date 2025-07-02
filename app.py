@@ -2,7 +2,7 @@ import json
 from typing import List, Optional
 import os
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, HTTPException
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from pathlib import Path
@@ -66,6 +66,13 @@ scheduler.start()
 client_path = Path("client/out")
 app.mount("/static", StaticFiles(directory=client_path), name="static")
 
+@app.get("/download-cv")
+async def download_cv():
+    file_path = Path("files/Simone Bitti/Simone Bitti CV.pdf")
+    if file_path.exists():
+        return FileResponse(path=file_path, filename="Simone Bitti CV.pdf", media_type="application/pdf")
+    raise HTTPException(status_code=404, detail="CV file not found")
+
 class StreamHandler(BaseCallbackHandler):
     def __init__(self):
         self.queue = []
@@ -76,6 +83,41 @@ class StreamHandler(BaseCallbackHandler):
     def get(self):
         while self.queue:
             yield self.queue.pop(0)
+
+def classify_intent(state: State):
+    llm = AzureChatOpenAI(
+        azure_deployment="gpt-4.1",
+        openai_api_version="2024-12-01-preview",
+        temperature=0.0
+    )
+
+    system_prompt = """You are an assistant that classifies a user's request.\nChoose one of these intents:\n- chitchat: the user is engaging in casual conversation or unrelated questions.\n- download_cv: the user wants to download Simone's CV or asks how to get it.\n- cv_query: the user asks about Simone's experiences, skills or any information contained in his CV.\nRespond with only one of these labels."""
+
+    user_msg = state["messages"][-1]["content"] if isinstance(state["messages"][-1], dict) else state["messages"][-1]
+    result = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_msg)])
+    intent = result.content.strip().lower()
+
+    if intent not in ["chitchat", "download_cv", "cv_query"]:
+        intent = "cv_query"
+
+    return {"intent": intent}
+
+def chitchat_agent(state: State):
+    llm = AzureChatOpenAI(
+        azure_deployment="gpt-4.1",
+        openai_api_version="2024-12-01-preview",
+        temperature=0.7
+    )
+
+    prompt = """You are Ask my cv, a friendly virtual assistant. The user is chitchatting.\nRespond with a witty and ironic tone while always supporting Simone."""
+
+    user_msg = state["messages"][-1]["content"] if isinstance(state["messages"][-1], dict) else state["messages"][-1]
+    result = llm.invoke([SystemMessage(content=prompt), HumanMessage(content=user_msg)])
+    return {"messages": result}
+
+def download_cv_agent(state: State):
+    message = "Puoi scaricare il CV di Simone da /download-cv"
+    return {"messages": AIMessage(content=message)}
 
 def rewrite_question(state: State):
     llm_history = AzureChatOpenAI(
@@ -264,6 +306,9 @@ async def stream_sse(text: str, history: str):
             print(f"Received history: {history}")
             
             graph_builder = StateGraph(State)
+            graph_builder.add_node("classify", RunnableLambda(classify_intent).with_config(tags=["nostream"]))
+            graph_builder.add_node("chitchat_agent", RunnableLambda(chitchat_agent))
+            graph_builder.add_node("download_cv_agent", RunnableLambda(download_cv_agent))
             graph_builder.add_node("rewrite_question", RunnableLambda(rewrite_question).with_config(tags=["nostream"]))
             graph_builder.add_node("get_structered_data", RunnableLambda(get_structered_data).with_config(tags=["nostream"]))
             graph_builder.add_node("get_unstructered_data", RunnableLambda(get_unstructered_data).with_config(tags=["nostream"]))
@@ -271,7 +316,18 @@ async def stream_sse(text: str, history: str):
             graph_builder.add_node("generate_final_answer", generate_final_answer)
             graph_builder.add_node("send_end", send_end)
 
-            graph_builder.add_edge(START, "rewrite_question")
+            graph_builder.add_edge(START, "classify")
+            graph_builder.add_conditional_edges(
+                "classify",
+                lambda x: x["intent"],
+                {
+                    "chitchat": "chitchat_agent",
+                    "download_cv": "download_cv_agent",
+                    "cv_query": "rewrite_question",
+                },
+            )
+            graph_builder.add_edge("chitchat_agent", "send_end")
+            graph_builder.add_edge("download_cv_agent", "send_end")
             graph_builder.add_edge("rewrite_question", "get_structered_data")
             graph_builder.add_edge("rewrite_question", "get_unstructered_data")
             graph_builder.add_edge("get_unstructered_data", "grade_documents_and_get_context")
