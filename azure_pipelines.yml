@@ -1,86 +1,79 @@
+# Deploy to Azure Kubernetes Service
+# Build and push image to Azure Container Registry; Deploy to Azure Kubernetes Service
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
 trigger:
-  branches:
-    include:
-      - main
+- main
+
+resources:
+- repo: self
 
 variables:
-  imageName: askmycv
-  vmImageName: 'ubuntu-latest'
+
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: '75a4d47d-3302-4735-a9c0-f5b43c2f2d5c'
   imageRepository: 'askmycv'
-  containerRegistry: 'simoneacr.azurecr.io'          # URL del tuo ACR
-  dockerRegistryServiceConnection: 'simoneacr-connection'   # Service Connection di tipo Docker Registry
-  kubernetesServiceConnection: 'azure-aks-arm-connection'   # Service Connection di tipo Azure RM
+  containerRegistry: 'simoneacr.azurecr.io'
+  dockerfilePath: '**/Dockerfile'
+  tag: '$(Build.BuildId)'
   imagePullSecret: 'acr-auth'
-  tag: '$(Build.BuildId)'                           # <-- tag unico ad ogni build
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
 
 
 stages:
 - stage: Build
-  displayName: Build & Push Docker Image
+  displayName: Build stage
   jobs:
   - job: Build
+    displayName: Build
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: $(vmImageName)
     steps:
     - task: Docker@2
-      displayName: Build and push image
+      displayName: Build and push an image to container registry
       inputs:
         command: buildAndPush
-        repository: $(imageName)
-        dockerfile: '**/Dockerfile'
-        containerRegistry: 'simoneacr-connection'
-        tags: latest
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
 
-    - task: PublishPipelineArtifact@1
-      inputs:
-        artifactName: 'manifests'
-        path: 'manifests'
+    - upload: manifests
+      artifact: manifests
 
 - stage: Deploy
   displayName: Deploy stage
   dependsOn: Build
+
   jobs:
   - deployment: Deploy
-    displayName: Deploy job
+    displayName: Deploy
     pool:
       vmImage: $(vmImageName)
-    environment: 'askmycv'
+    environment: 'simonebittidevChatMyCv.default'
     strategy:
       runOnce:
         deploy:
           steps:
-          # Scarica i manifest (generati nello stage Build o commitati nel repo)
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              artifactName: 'manifests'
-              downloadPath: '$(Pipeline.Workspace)/manifests'
-
-          # (Una tantum) crea/aggiorna l'imagePullSecret nel cluster
-          - task: KubernetesManifest@1
+          - task: KubernetesManifest@0
             displayName: Create imagePullSecret
             inputs:
               action: createSecret
-              connectionType: azureResourceManager
-              azureSubscriptionEndpoint: '$(kubernetesServiceConnection)'
-              azureResourceGroup: 'pocs_abozar_simone_rg'   # <-- aggiungi
-              kubernetesCluster: 'k8s-cluster'   
-              secretType: dockerRegistry
-              secretName: '$(imagePullSecret)'
-              dockerRegistryEndpoint: '$(dockerRegistryServiceConnection)'
+              secretName: $(imagePullSecret)
+              dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
 
-          # Deploy: patch del Deployment con il nuovo tag ⇒ rollout automatico
-          - task: KubernetesManifest@1
-            displayName: Deploy to AKS
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes cluster
             inputs:
               action: deploy
-              connectionType: azureResourceManager
-              azureSubscriptionEndpoint: '$(kubernetesServiceConnection)'
-              azureResourceGroup: 'pocs_abozar_simone_rg'   # <-- aggiungi
-              kubernetesCluster: 'k8s-cluster'   
               manifests: |
-                $(Pipeline.Workspace)/manifests/deployment.yaml
-                $(Pipeline.Workspace)/manifests/service.yaml
-                $(Pipeline.Workspace)/manifests/ingress.yaml
-              containers: '$(containerRegistry)/$(imageRepository):$(tag)'   # <-- patch
-              imagePullSecrets: '$(imagePullSecret)'
+                $(Pipeline.Workspace)/manifests/deployment.yml
+                $(Pipeline.Workspace)/manifests/service.yml
+              imagePullSecrets: |
+                $(imagePullSecret)
+              containers: |
+                $(containerRegistry)/$(imageRepository):$(tag)
 
