@@ -4,6 +4,10 @@ hr {
   @apply border-gray-300;
 }
 
+a {
+  color: var(--color-sky-600) !important;
+}
+
 /* :root {
   --background: #ffffff;
   --foreground: #171717;

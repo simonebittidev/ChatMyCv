@@ -22,7 +22,7 @@ FILES_FOLDER = "files/Simone Bitti"
 
 def summarize_document(html_pages):
     llm = AzureChatOpenAI(
-        azure_deployment="gpt-4.1",
+        azure_deployment="gpt-4.1-mini",
         openai_api_version="2024-12-01-preview",
         temperature=0.0
     )
@@ -102,7 +102,7 @@ You will be provided with a set of images, each representing a page from a PDF d
     prompt = ChatPromptTemplate.from_messages(messages)
    
     llm = AzureChatOpenAI(
-        azure_deployment="gpt-4.1",
+        azure_deployment="gpt-4.1-mini",
         openai_api_version="2024-12-01-preview",
         temperature=0.0
     )
@@ -117,7 +117,7 @@ You will be provided with a set of images, each representing a page from a PDF d
 
 def get_summary_chunks(summary):
     llm = AzureChatOpenAI(
-        azure_deployment="gpt-4.1",
+        azure_deployment="gpt-4.1-mini",
         openai_api_version="2024-12-01-preview",
         temperature=0.0
     )
@@ -216,7 +216,7 @@ async def create_kg():
                     documents.append(document)
 
                 llm = AzureChatOpenAI(
-                    azure_deployment="gpt-4.1",
+                    azure_deployment="gpt-4.1-mini",
                     openai_api_version="2024-12-01-preview",
                     temperature=0.0
                 )

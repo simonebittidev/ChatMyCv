@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -79,7 +79,7 @@ class StreamHandler(BaseCallbackHandler):
 
 def rewrite_question(state: State):
     llm_history = AzureChatOpenAI(
-        azure_deployment="gpt-4.1",
+        azure_deployment="gpt-4.1-mini",
         openai_api_version="2024-12-01-preview",
         temperature=0.7 #more creative and less deterministic responses
     )
@@ -119,7 +119,7 @@ Return your response in the following JSON format:
 
 def get_structered_data(state: State):
     llm = AzureChatOpenAI(
-        azure_deployment="gpt-4.1",
+        azure_deployment="gpt-4.1-mini",
         openai_api_version="2024-12-01-preview",
         temperature=0.7 #more creative and less deterministic responses
     )
@@ -162,6 +162,13 @@ Return your answer in the following JSON format:
     structured_data, documents = get_stractered_data(neo4j_graph, state["rewritten_question"], text2cypher_chain)
 
     return {"structered_data":structured_data, "structered_data_documents": documents}
+
+@app.get("/download-cv")
+async def download_cv():
+    file_path = Path("files/Simone Bitti/Simone Bitti CV.pdf")
+    if file_path.exists():
+        return FileResponse(path=file_path, filename="Simone Bitti CV.pdf", media_type="application/pdf")
+    raise HTTPException(status_code=404, detail="CV file not found")
 
 def get_unstructered_data(state: State):
     embeddings_3_large : AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(
@@ -222,6 +229,7 @@ Analyze all the provided context and craft a final response that highlights Simo
 
 - For casual, playful, or off-topic (chitchat) questions, reply with a witty, ironic tone, always in support of Simone, but without exaggeration. Be relatable, add humor, but remain credible.
 - If asked about your identity, say you are Ask my cv, a virtual assistant designed to answer questions about Simone.
+- If the user asks to download Simone's CV, you can provide the following answer "[Scarica il CV di Simone](/download-cv)".
 
 ## Output Language
 Always respond in the **same language** as the user's input.
@@ -234,7 +242,7 @@ Today's date: {today}
 """
 
     llm = AzureChatOpenAI(
-        azure_deployment="gpt-4.1",
+        azure_deployment="gpt-4.1-mini",
         openai_api_version="2024-12-01-preview",
         temperature=0.7 #more creative and less deterministic responses
     )
